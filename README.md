@@ -12,7 +12,7 @@ These are the goals:
 
 This could be used as a playground for prototyping.
 
-Obviously the performance will be worse than using Kafka and correctness less reliable. But if you have the traffic that exceeds the limitation of this, you should consider building a Kafka cluster. 
+Obviously reliability and performance will be worse than using Kafka. But if you have the traffic that exceeds the limitation of this, you should consider building a Kafka cluster. 
 
 In future iterations maybe I'll put support for Kafka and Kinesis, but there are so many paradigms on this that for now it's out of scope.
 
