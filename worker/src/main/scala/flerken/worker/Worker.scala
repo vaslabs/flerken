@@ -31,12 +31,13 @@ class Worker[F[_], Work, Result](
     pendingWork => notifier.run(pendingWork).map(_ => pendingWork)
   }
 
-  private[worker] def executeWork = Kleisli[F, PendingWork[Work], WorkCompleted[Result]] {
+  private[worker] def executeWork = Kleisli[F, PendingWork[Work], WorkFinished] {
     pendingWork =>
-      workExecutor.map(result => WorkCompleted(pendingWork.workId, result)).run(pendingWork.work)
+      workExecutor.map[WorkFinished](result => WorkCompleted(pendingWork.workId, result))
+        .run(pendingWork.work) orElse F.delay(WorkError(pendingWork.workId))
   }
 
-  private[worker] def completedNotification = Kleisli[F, WorkCompleted[Result], NotificationAck] {
+  private[worker] def completedNotification = Kleisli[F, WorkFinished, NotificationAck] {
     workCompleted =>
       notifier.run(workCompleted)
   }

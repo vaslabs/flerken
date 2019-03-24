@@ -14,7 +14,10 @@ object Protocol {
     def workId: WorkId
   }
   case class PendingWork[Work](workId: WorkId, work: Work) extends Notification
-  case class WorkCompleted[Result](workId: WorkId, result: Result) extends Notification
+
+  sealed trait WorkFinished extends Notification
+  case class WorkCompleted[Result](workId: WorkId, result: Result) extends WorkFinished
+  case class WorkError(workId: WorkId) extends WorkFinished
 
   case class NotificationAck(workId: WorkId)
 }
