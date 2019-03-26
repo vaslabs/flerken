@@ -1,30 +1,29 @@
 package flerken.worker
 
 import cats.data.Kleisli
-import cats.effect.Async
-import flerken.worker.Protocol._
-
+import cats.effect.Effect
 import cats.implicits._
+import flerken.worker.Protocol._
 
 
 trait Unique[F[_], A] {
-  def id: F[String]
+  def id(a: A): F[String]
 }
 
 class Worker[F[_], Work, Result](
           notifier: Kleisli[F, Notification, NotificationAck],
           workExecutor: Kleisli[F, Work, Result])(implicit
-          F: Async[F],
+          F: Effect[F],
           unique: Unique[F, Work]
 
 ) {
 
-  private def newWorkId = unique.id.map(id => WorkId(id))
+  private def newWorkId(work: Work) = unique.id(work).map(id => WorkId(id))
 
   private[worker] def receiveWork =
     Kleisli [F, Work, PendingWork[Work]] {
       work =>
-        newWorkId.map(id => PendingWork(id, work))
+        newWorkId(work).map(id => PendingWork(id, work))
     }
 
   private[worker] def pendingNotification = Kleisli[F, PendingWork[Work], PendingWork[Work]] {

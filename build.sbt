@@ -6,16 +6,22 @@ version := "0.1"
 
 scalaVersion := "2.12.8"
 
-lazy val worker = (project in file("worker")).settings(
-  libraryDependencies ++= Worker.dependencies
-).settings(compilerSettings)
-
 lazy val flerken =
   (project in file("."))
     .settings(noPublishSettings)
     .aggregate(
       worker
     )
+
+lazy val worker = (project in file("worker")).settings(
+  libraryDependencies ++= Worker.dependencies
+).settings(compilerSettings)
+
+lazy val httpWorker = (project in file("http-worker"))
+  .settings(
+    libraryDependencies ++= HttpWorker.dependencies
+  ).settings(compilerSettings)
+  .dependsOn(worker)
 
 lazy val noPublishSettings = Seq(
   publish := {},
