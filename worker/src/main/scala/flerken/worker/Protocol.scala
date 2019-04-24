@@ -19,5 +19,5 @@ object Protocol {
   case class WorkCompleted[Result](workId: WorkId, result: Result) extends WorkFinished
   case class WorkError(workId: WorkId) extends WorkFinished
 
-  case class NotificationAck(workId: WorkId)
+  case class NotificationAck(workId: WorkId) extends WorkerApi
 }

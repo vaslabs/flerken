@@ -13,7 +13,7 @@ object Dependencies {
     object Akka {
       val http = "10.1.7"
       val circeHttp = "1.25.2"
-      val core = "2.5.19"
+      val main = "2.5.22"
     }
 
     object Circe {
@@ -35,7 +35,11 @@ object Dependencies {
         "com.typesafe.akka" %% "akka-http" % Versions.Akka.http,
         "de.heikoseeberger" %% "akka-http-circe" % Versions.Akka.circeHttp,
         "com.typesafe.akka" %% "akka-http-testkit" % Versions.Akka.http % Test,
-        "com.typesafe.akka" %% "akka-stream-testkit" % Versions.Akka.core % Test,
+        "com.typesafe.akka" %% "akka-stream-testkit" % Versions.Akka.main % Test
+      )
+      val actors = Seq(
+        "com.typesafe.akka" %% "akka-actor-typed" % Versions.Akka.main,
+        "com.typesafe.akka" %% "akka-actor-testkit-typed" % Versions.Akka.main % Test
       )
     }
 
@@ -52,6 +56,10 @@ object Dependencies {
     import Libraries._
     object Worker {
       val dependencies = Seq(Cats.effect, Testing.scalatest, Testing.scalacheck)
+    }
+
+    object ReactiveWorker {
+      val dependencies: Seq[ModuleID] = Akka.actors ++ Seq(Cats.effect, Testing.scalatest)
     }
 
     object HttpWorker {

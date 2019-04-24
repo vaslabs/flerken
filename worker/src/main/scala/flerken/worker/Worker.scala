@@ -11,8 +11,8 @@ trait Unique[F[_], A] {
 }
 
 class Worker[F[_], Work, Result](
-          notifier: Kleisli[F, Notification, NotificationAck],
-          workExecutor: Kleisli[F, Work, Result])(implicit
+          val notifier: Kleisli[F, Notification, NotificationAck],
+          val workExecutor: Kleisli[F, Work, Result])(implicit
           F: Effect[F],
           unique: Unique[F, Work]
 

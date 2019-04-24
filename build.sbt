@@ -17,6 +17,11 @@ lazy val worker = (project in file("worker")).settings(
   libraryDependencies ++= Worker.dependencies
 ).settings(compilerSettings)
 
+lazy val reactiveWorker = (project in file("reactive-worker")).settings(
+  libraryDependencies ++= ReactiveWorker.dependencies
+).settings(compilerSettings)
+  .dependsOn(worker)
+
 lazy val httpWorker = (project in file("http-worker"))
   .settings(
     libraryDependencies ++= HttpWorker.dependencies

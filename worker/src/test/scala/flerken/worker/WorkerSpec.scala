@@ -51,7 +51,7 @@ object WorkerSpec {
   case class Result(payload: String)
 
   implicit object UniqueWork extends Unique[IO, Work] {
-    override def id: IO[String] = IO.pure(Random.alphanumeric.take(32).mkString)
+    override def id(w: Work): IO[String] = IO.pure(Random.alphanumeric.take(32).mkString)
   }
 
   lazy val pendingWorkReceived = new AtomicReference[Option[Notification]](None)
