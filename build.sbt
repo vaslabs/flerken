@@ -26,7 +26,7 @@ lazy val httpWorker = (project in file("http-worker"))
   .settings(
     libraryDependencies ++= HttpWorker.dependencies
   ).settings(compilerSettings)
-  .dependsOn(worker)
+  .dependsOn(worker, reactiveWorker)
 
 lazy val noPublishSettings = Seq(
   publish := {},

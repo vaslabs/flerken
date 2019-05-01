@@ -6,6 +6,8 @@ object Protocol {
 
   case class ScheduledWork[F[_], Work, Result](workId: WorkId, work: Work, executor: F[Result])
 
+  sealed trait Command extends WorkerApi
+  case class SubmitWork[Work](workId: WorkId, work: Work) extends Command
 
 
   case class WorkId(id: String) extends AnyVal

@@ -11,7 +11,7 @@ object Dependencies {
       val scalacheck = "1.14.0"
     }
     object Akka {
-      val http = "10.1.7"
+      val http = "10.1.8"
       val circeHttp = "1.25.2"
       val main = "2.5.22"
     }
@@ -63,7 +63,7 @@ object Dependencies {
     }
 
     object HttpWorker {
-      val dependencies = Akka.http ++ Circe.all ++ Seq(Testing.scalatest, Testing.scalacheck)
+      val dependencies = Akka.http ++ Akka.actors ++ Circe.all ++ Seq(Testing.scalatest, Testing.scalacheck)
     }
   }
 }

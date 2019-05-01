@@ -2,46 +2,36 @@ package flerken.worker.http
 
 import java.util.UUID
 
+import akka.actor.testkit.typed.scaladsl.ActorTestKit
 import akka.http.scaladsl.model.StatusCodes
 import akka.http.scaladsl.testkit.ScalatestRouteTest
-import cats.data.Kleisli
-import cats.effect.IO
-import cats.effect.implicits._
-import flerken.worker.Protocol.{Notification, NotificationAck, WorkId}
-import flerken.worker.Unique
-import io.circe.generic.auto._
-import org.scalatest.{Matchers, WordSpec}
+import flerken.worker.Protocol.{NotificationAck, SubmitWork, WorkId}
+import io.circe.{Decoder, Encoder}
+import org.scalatest.{BeforeAndAfterAll, Matchers, WordSpec}
 
-import scala.concurrent.{Await, Promise}
-import scala.concurrent.duration._
-import scala.util.Success
-
-class WorkerRouteSpec extends WordSpec with Matchers with ScalatestRouteTest {
+class WorkerRouteSpec extends WordSpec with Matchers with ScalatestRouteTest with BeforeAndAfterAll {
 
   import WorkerRouteSpec._
   import de.heikoseeberger.akkahttpcirce.FailFastCirceSupport._
 
-  val notificationAckPromise = Promise.apply[NotificationAck]()
+  val testKit = ActorTestKit()
 
-  implicit lazy val notifier: Kleisli[IO, Notification, NotificationAck] = Kleisli[IO, Notification, NotificationAck] {
-    notification =>
-      IO {
-        val notificationAck = NotificationAck(notification.workId)
-        notificationAckPromise.complete(Success(NotificationAck(notification.workId)))
-        notificationAck
-      }
-  }
+  override def afterAll(): Unit = testKit.shutdownTestKit()
+
+  import WorkerRouteSpec.json_support._
 
   "worker route" can {
-    val route = Worker.route[IO, SampleWork, SampleResult]
+    val httpWorker: Worker[SampleWork] = new Worker[SampleWork](testKit.system)
+
+    import httpWorker.jsonSupport._
+
     val work: SampleWork =  WorkStringConcatenation("a", 1, 2.0)
     "notify for work received" in {
-      Post("/", work) ~> route ~> check {
+      Post("/", SubmitWork(workID, work)) ~> httpWorker.route ~> check {
         status shouldBe StatusCodes.Accepted
-        Await.result(notificationAckPromise.future, 3 seconds)
+        responseAs[NotificationAck] shouldBe NotificationAck(workID)
       }
     }
-
   }
 
 }
@@ -55,10 +45,12 @@ object WorkerRouteSpec {
   sealed trait SampleResult
   case class Result(concatenatedString: String) extends SampleResult
 
-  implicit lazy val processing: Kleisli[IO, SampleWork, SampleResult] = Kleisli[IO, SampleWork, SampleResult] {
-    _ => IO.never
-  }
+  implicit lazy val workID = WorkId(UUID.randomUUID().toString)
 
-  implicit lazy val unique: Unique[IO, SampleWork] = (_: SampleWork) =>
-    IO.pure(UUID.randomUUID().toString)
+  object json_support {
+    import io.circe.generic.semiauto._
+    import io.circe.generic.auto._
+    implicit val sampleWorkDecoder: Decoder[SampleWork] = deriveDecoder[SampleWork]
+    implicit val sampleWorkEncoder: Encoder[SampleWork] = deriveEncoder[SampleWork]
+  }
 }

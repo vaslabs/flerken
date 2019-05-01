@@ -1,37 +1,54 @@
 package flerken.worker.http
 
+import akka.actor.typed.ActorSystem
+import akka.actor.typed.scaladsl.adapter._
 import akka.http.scaladsl.model.StatusCodes
 import akka.http.scaladsl.server.Directives._
 import akka.http.scaladsl.server._
-import cats.data.Kleisli
-import cats.effect._
-import cats.effect.implicits._
-import flerken.worker.Protocol.{Notification, NotificationAck}
-import flerken.worker.Unique
-import io.circe.Decoder
+import flerken.worker.Protocol.{NotificationAck, SubmitWork, WorkId}
+import io.circe.{Decoder, Encoder}
 
 
-object Worker {
+class Worker[Work](actorSystem: ActorSystem[_])(implicit
+                   decoder: Decoder[Work], encoder: Encoder[Work]) {
 
   import de.heikoseeberger.akkahttpcirce.FailFastCirceSupport._
-  import io.circe.generic.auto._
 
-  def route[F[_], Work, Result](implicit
-                                decoder: Decoder[Work],
-                                F: Effect[F],
-                                P: Kleisli[F, Work, Result],
-                                N: Kleisli[F, Notification, NotificationAck],
-                                uni: Unique[F, Work]): Route = {
-    val worker = new flerken.worker.Worker(N, P)
+  val jsonSupport = new Worker.JsonSupport[Work]
+  import jsonSupport._
+
+  lazy val route: Route = {
     pathSingleSlash {
       post {
-        entity(as[Work]) { work =>
-            worker.task.run(work).toIO.unsafeToFuture()
-            complete(StatusCodes.Accepted)
+        entity(as[SubmitWork[Work]]) { work =>
+            actorSystem.toUntyped.eventStream.publish(work)
+            complete(StatusCodes.Accepted -> work.workId)
         }
       }
     }
   }
 
+}
 
+object Worker {
+  object json_support {
+  }
+  class JsonSupport[Work]()(implicit val decoder: Decoder[Work], val encoder: Encoder[Work]) {
+    import io.circe.generic.semiauto._
+
+    implicit val workIdDecoder = Decoder.decodeString.map(WorkId(_))
+    implicit val workIdEncoder: Encoder[WorkId] = Encoder.encodeString.contramap(_.id)
+
+    implicit private[http] val submitWorkDecoder: Decoder[SubmitWork[Work]] =
+      deriveDecoder[SubmitWork[Work]]
+
+    implicit val submitWorkEncoder: Encoder[SubmitWork[Work]] =
+      deriveEncoder[SubmitWork[Work]]
+
+    implicit private[http] val notificationAckEncoder: Encoder[NotificationAck] =
+      Encoder.encodeString.contramap(_.workId.id)
+
+    implicit val notificationAckDecoder: Decoder[NotificationAck] =
+      Decoder.decodeString.map(id => NotificationAck(WorkId(id)))
+  }
 }
