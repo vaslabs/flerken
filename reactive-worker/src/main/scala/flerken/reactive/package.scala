@@ -19,6 +19,9 @@ package object reactive {
       compose(behaviorA, behaviorB)
     }
 
+    def behavior: Behavior[A] = ReactiveWorker.fromKleisli(kleisli)
+
+
     private def compose[A, B](
           behaviorA: Behavior[A],
           behaviorB: Behavior[B]): Behavior[A] =

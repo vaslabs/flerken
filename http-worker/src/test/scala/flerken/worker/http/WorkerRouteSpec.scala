@@ -24,6 +24,7 @@ class WorkerRouteSpec extends WordSpec with Matchers with ScalatestRouteTest wit
     val httpWorker: Worker[SampleWork] = new Worker[SampleWork](testKit.system)
 
     import httpWorker.jsonSupport._
+    import Worker.json_support._
 
     val work: SampleWork =  WorkStringConcatenation("a", 1, 2.0)
     "notify for work received" in {

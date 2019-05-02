@@ -15,6 +15,7 @@ class Worker[Work](actorSystem: ActorSystem[_])(implicit
   import de.heikoseeberger.akkahttpcirce.FailFastCirceSupport._
 
   val jsonSupport = new Worker.JsonSupport[Work]
+  import Worker.json_support._
   import jsonSupport._
 
   lazy val route: Route = {
@@ -32,23 +33,29 @@ class Worker[Work](actorSystem: ActorSystem[_])(implicit
 
 object Worker {
   object json_support {
+    implicit val notificationAckDecoder: Decoder[NotificationAck] =
+      Decoder.decodeString.map(id => NotificationAck(WorkId(id)))
+
+    implicit private[flerken] val notificationAckEncoder: Encoder[NotificationAck] =
+      Encoder.encodeString.contramap(_.workId.id)
+
+    implicit val workIdDecoder = Decoder.decodeString.map(WorkId(_))
+    implicit val workIdEncoder: Encoder[WorkId] = Encoder.encodeString.contramap(_.id)
   }
   class JsonSupport[Work]()(implicit val decoder: Decoder[Work], val encoder: Encoder[Work]) {
     import io.circe.generic.semiauto._
 
-    implicit val workIdDecoder = Decoder.decodeString.map(WorkId(_))
-    implicit val workIdEncoder: Encoder[WorkId] = Encoder.encodeString.contramap(_.id)
+    import json_support._
 
-    implicit private[http] val submitWorkDecoder: Decoder[SubmitWork[Work]] =
+
+    implicit private[flerken] val submitWorkDecoder: Decoder[SubmitWork[Work]] =
       deriveDecoder[SubmitWork[Work]]
 
     implicit val submitWorkEncoder: Encoder[SubmitWork[Work]] =
       deriveEncoder[SubmitWork[Work]]
 
-    implicit private[http] val notificationAckEncoder: Encoder[NotificationAck] =
-      Encoder.encodeString.contramap(_.workId.id)
 
-    implicit val notificationAckDecoder: Decoder[NotificationAck] =
-      Decoder.decodeString.map(id => NotificationAck(WorkId(id)))
+
+
   }
 }

@@ -10,7 +10,8 @@ lazy val flerken =
   (project in file("."))
     .settings(noPublishSettings)
     .aggregate(
-      worker
+      reactiveWorker,
+      httpWorker
     )
 
 lazy val worker = (project in file("worker")).settings(
