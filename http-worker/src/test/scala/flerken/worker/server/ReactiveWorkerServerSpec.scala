@@ -64,6 +64,7 @@ class ReactiveWorkerServerSpec extends WordSpec
 
       resultStoreRef ! ResultStore.UpdateWork(WorkCompleted(workID, OA()))
 
+      expect(WorkCompleted(workID, OA()))
     }
 
 
