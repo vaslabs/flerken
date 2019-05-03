@@ -12,9 +12,9 @@ import flerken.worker.Protocol._
 import flerken.worker.http.Worker
 import flerken.worker.http.WorkerRouteSpec.workID
 import io.circe.{Decoder, Encoder}
-import org.scalatest.{BeforeAndAfterAll, Matchers, WordSpec}
+import org.scalatest.{Assertion, BeforeAndAfterAll, Matchers, WordSpec}
 
-
+import scala.annotation.tailrec
 import scala.concurrent.duration._
 
 class ReactiveWorkerServerSpec extends WordSpec
@@ -55,16 +55,25 @@ class ReactiveWorkerServerSpec extends WordSpec
     "eventually have a result" in {
       val header = new RawHeader("X-FLERKEN-WORK-ID", workID.id)
 
-      def expect(expectation: Notification[Outcome]) =
+      def workResult =
         Get("/", SubmitWork[Work](workID, WA())).withHeaders(header) ~> resultStore.route ~> check {
-          responseAs[Notification[Outcome]] shouldBe expectation
+          responseAs[Notification[Outcome]]
         }
 
-      expect(EmptyWork(workID))
+      @tailrec
+      def eventually(tries: Int = 5): Assertion = {
+        println(s"Eventually $tries")
+        workResult match {
+          case EmptyWork(_) if tries > 0 =>
+            eventually(tries - 1)
+          case wc @ WorkCompleted(_, _) =>
+            wc shouldBe WorkCompleted(workID, OA())
+          case emptyWork => emptyWork shouldBe WorkCompleted(workID, OA())
+        }
 
-      resultStoreRef ! ResultStore.UpdateWork(WorkCompleted(workID, OA()))
+      }
 
-      expect(WorkCompleted(workID, OA()))
+      eventually()
     }
 
 
@@ -78,7 +87,7 @@ class ReactiveWorkerServerSpec extends WordSpec
     }
   }
 
-  val workerBehavior: Behavior[Work] = kleisliWork.behavior
+  val workerBehavior: Behavior[SubmitWork[Work]] = kleisliWork.behavior
   val worker = testKit.spawn(workerBehavior, "SampleWorkerReactiveWorkerServerSpec")
   val resultsListener = testKit.createTestProbe[Outcome]
 }

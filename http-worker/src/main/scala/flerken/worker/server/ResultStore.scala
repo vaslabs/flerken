@@ -1,5 +1,6 @@
 package flerken.worker.server
 
+import akka.actor.typed.scaladsl.adapter._
 import akka.actor.typed.scaladsl.AskPattern._
 import akka.actor.typed.scaladsl.Behaviors
 import akka.actor.typed.{ActorRef, ActorSystem, Behavior}
@@ -56,12 +57,28 @@ object ResultStore {
   private[flerken] case class UpdateWork[Outcome](value: Notification[Outcome]) extends UpdateQuery[Outcome]
 
 
-  private[flerken] def behavior[Outcome](state: Notification[Outcome]): Behavior[Query[Outcome]] =
-    Behaviors.receiveMessage[Query[Outcome]] {
-      case FetchOutcome(_, replyTo) =>
-        replyTo ! state
-        Behaviors.same
-      case UpdateWork(notification) => behavior(notification)
+  private[flerken] def behavior[Outcome](
+          state: Notification[Outcome]): Behavior[Query[Outcome]] =
+    Behaviors.setup[Query[Outcome]] { ctx =>
+      ctx.spawnAnonymous(notificationListenerBehavior(ctx.self))
+      Behaviors.receiveMessage[Query[Outcome]] {
+        case FetchOutcome(_, replyTo) =>
+          replyTo ! state
+          Behaviors.same
+        case UpdateWork(notification) => behavior(notification)
+      }
+    }
+
+  private def notificationListenerBehavior[Outcome](
+      replyTo: ActorRef[UpdateWork[Outcome]]): Behavior[Notification[Outcome]] =
+    Behaviors.setup {
+      ctx =>
+        ctx.system.toUntyped.eventStream.subscribe(ctx.self.toUntyped, classOf[Notification[Outcome]])
+        Behaviors.receiveMessage {
+          case notification =>
+            replyTo ! UpdateWork(notification)
+            Behaviors.same
+        }
     }
 
   class JsonSupport[A] private[ResultStore](implicit val encoder: Encoder[A], val decoder: Decoder[A]) {

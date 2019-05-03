@@ -59,7 +59,7 @@ object Dependencies {
     }
 
     object ReactiveWorker {
-      val dependencies: Seq[ModuleID] = Akka.actors ++ Seq(Cats.effect, Testing.scalatest)
+      val dependencies: Seq[ModuleID] = Akka.actors ++ Seq(Cats.effect, Testing.scalatest, Testing.scalacheck)
     }
 
     object HttpWorker {

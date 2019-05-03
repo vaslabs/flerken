@@ -2,6 +2,7 @@ package flerken.worker.http
 
 import java.util.UUID
 
+import akka.actor.typed.scaladsl.adapter._
 import akka.actor.testkit.typed.scaladsl.ActorTestKit
 import akka.http.scaladsl.model.StatusCodes
 import akka.http.scaladsl.testkit.ScalatestRouteTest
@@ -26,12 +27,18 @@ class WorkerRouteSpec extends WordSpec with Matchers with ScalatestRouteTest wit
     import httpWorker.jsonSupport._
     import Worker.json_support._
 
+    val workListener = testKit.createTestProbe[SubmitWork[SampleWork]]
+
+    testKit.system.toUntyped.eventStream.subscribe(workListener.ref.toUntyped, classOf[SubmitWork[SampleWork]])
+
     val work: SampleWork =  WorkStringConcatenation("a", 1, 2.0)
     "notify for work received" in {
       Post("/", SubmitWork(workID, work)) ~> httpWorker.route ~> check {
         status shouldBe StatusCodes.Accepted
         responseAs[NotificationAck] shouldBe NotificationAck(workID)
       }
+
+      workListener.expectMessage(SubmitWork(workID, work))
     }
   }
 
