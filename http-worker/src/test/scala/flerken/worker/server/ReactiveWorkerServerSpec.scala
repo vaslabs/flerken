@@ -25,17 +25,6 @@ class ReactiveWorkerServerSpec extends WordSpec
   import ReactiveWorkerServerSpec.json_support._
   import flerken.reactive._
 
-  val testKit = ActorTestKit()
-  val httpWorker: Worker[Work] = new Worker[Work](testKit.system)
-
-  implicit val timeout: Timeout = Timeout(2 seconds)
-
-  val resultStoreRef: ActorRef[ResultStore.Query[Outcome]] =
-    testKit.spawn(ResultStore.behavior[Outcome](EmptyWork[Outcome](workID)), "ResultStoreSpec")
-
-
-  val resultStore = new ResultStore[Outcome](testKit.system, resultStoreRef)
-
   override def afterAll(): Unit = testKit.shutdownTestKit()
 
   "submitting work" must {
@@ -78,6 +67,17 @@ class ReactiveWorkerServerSpec extends WordSpec
 
 
   }
+
+  val testKit = ActorTestKit()
+  val httpWorker: Worker[Work] = new Worker[Work](testKit.system)
+
+  implicit val timeout: Timeout = Timeout(2 seconds)
+
+  val resultStoreRef: ActorRef[ResultStore.Query[Outcome]] =
+    testKit.spawn(ResultStore.behavior[Outcome](EmptyWork[Outcome](workID)), "ResultStoreSpec")
+
+
+  val resultStore = new ResultStore[Outcome](testKit.system, resultStoreRef)
 
 
   val kleisliWork = Kleisli[IO, Work, Outcome] {
