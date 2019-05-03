@@ -9,6 +9,7 @@ import flerken.worker.Protocol.{SubmitWork, WorkCompleted, WorkId}
 
 import scala.util.{Failure, Success}
 import scala.concurrent.duration._
+import scala.reflect.ClassTag
 
 object ReactiveWorker {
 
@@ -55,16 +56,18 @@ object ReactiveWorker {
   def fromKleisli[F[_], Input, Output](
           kleisli: Kleisli[F, Input, Output],
           composeWith: Option[Behavior[SubmitWork[Output]]] = None)(implicit
-          F: Effect[F]): Behavior[SubmitWork[Input]] = Behaviors.setup[SubmitWork[Input]] { ctx =>
+          F: Effect[F],
+          classTag: ClassTag[Input]): Behavior[SubmitWork[Input]] = Behaviors.setup[SubmitWork[Input]] { ctx =>
     val forwardTo : Option[ActorRef[SubmitWork[Output]]] = composeWith.map {
       behavior => ctx.spawnAnonymous(behavior)
     }
     ctx.system.toUntyped.eventStream.subscribe(ctx.self.toUntyped, classOf[SubmitWork[Input]])
     Behaviors.receive {
-      case (ctx, input) =>
+      case (ctx, input) if input.work.getClass == classTag.runtimeClass =>
         val effect = kleisli.run(input.work)
         ctx.spawnAnonymous(kernelErrorUnsafe[F, Output](input.workId, effect, forwardTo))
         Behaviors.same
+      case (_, _) => Behaviors.ignore
     }
   }
 
