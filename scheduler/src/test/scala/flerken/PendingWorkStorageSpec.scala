@@ -6,6 +6,8 @@ import java.util.concurrent.atomic.AtomicReference
 import akka.actor.typed.eventstream.Subscribe
 import org.scalatest.{Matchers, WordSpec}
 
+import scala.concurrent.duration._
+
 class PendingWorkStorageSpec extends WordSpec with Matchers with AkkaBase {
 
   import PendingWorkStorage._
@@ -63,6 +65,15 @@ class PendingWorkStorageSpec extends WordSpec with Matchers with AkkaBase {
       storage ! FetchWork(sender.ref)
 
       sender.expectMessage(DoWork(firstWorkIdentifier.get(), "some work"))
+    }
+
+    "not re-schedule completed work" in {
+      storage ! CompleteWork(firstWorkIdentifier.get())
+      pendingWorkEventListener.expectMessage(WorkCompleted(firstWorkIdentifier.get()))
+      storage ! WorkFailed(firstWorkIdentifier.get())
+      pendingWorkEventListener.expectNoMessage(200 milli)
+      storage ! FetchWork(sender.ref)
+      sender.expectMessage(NoWork)
     }
   }
 

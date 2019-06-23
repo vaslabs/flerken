@@ -29,12 +29,15 @@ object PendingWorkStorage {
       case (ctx, Retry(id, work)) =>
         ctx.system.eventStream ! Publish(WorkRetry(id))
         behaviorWithWork(NonEmptyList.of(PendingWork(id, work)), allocatedWorkStorage)
+      case (_, CompleteWork(identifier)) =>
+        allocatedWorkStorage ! AllocatedWorkStorage.RemoveWork(identifier)
+        Behaviors.same
   }
 
   private def behaviorWithWork(
                   pendingWork: NonEmptyList[PendingWork[_]],
                   allocatedWorkStorage: ActorRef[AllocatedWorkStorage.Protocol]): Behavior[Protocol] =
-    Behaviors.receive {
+    Behaviors.receive[Protocol] {
       case (_, FetchWork(replyTo)) =>
         val pendingWorkHead = pendingWork.head
         replyTo ! DoWork(pendingWorkHead.uuid, pendingWorkHead.work)
@@ -54,6 +57,9 @@ object PendingWorkStorage {
       case (ctx, Retry(id, work)) =>
         ctx.system.eventStream ! Publish(WorkRetry(id))
         behaviorWithWork(pendingWork :+ PendingWork(id, work), allocatedWorkStorage)
+      case (_, CompleteWork(identifier)) =>
+        allocatedWorkStorage ! AllocatedWorkStorage.RemoveWork(identifier)
+        Behaviors.same
     }
 
   private case class PendingWork[W](uuid: UUID, work: W)
@@ -65,6 +71,7 @@ object PendingWorkStorage {
   case class AddWork[W](work: W, replyTo: ActorRef[WorkAck]) extends Protocol
 
   case class WorkFailed(identifier: UUID) extends Protocol
+  case class CompleteWork(identifier: UUID) extends Protocol
 
   private[flerken] case class Retry[W](id: UUID, work: W) extends Protocol
 
@@ -79,26 +86,30 @@ object PendingWorkStorage {
   sealed trait Event
 
   case class WorkRetry(id: UUID) extends Event
+  case class WorkCompleted(id: UUID) extends Event
 
 }
 
 private object AllocatedWorkStorage {
 
-  def behavior: Behavior[Protocol] = Behaviors.receiveMessage {
-    case FetchWork(id, _) =>
-      println(s"No work to fetch failed work ${id}")
+  def behavior: Behavior[Protocol] = Behaviors.receiveMessage[Protocol] {
+    case FetchWork(_, _) =>
       Behaviors.same
     case WorkAllocated(id, work) =>
       behaviorWithAllocatedWork(Map(id -> work))
+    case RemoveWork(_) =>
+      Behaviors.same
   }
 
-  def behaviorWithAllocatedWork(allocated: Map[UUID, _]): Behavior[Protocol] = Behaviors.receiveMessage {
-    case FetchWork(id, replyTo) =>
-      println(s"Fetching failed work ${id}")
+  def behaviorWithAllocatedWork(allocated: Map[UUID, _]): Behavior[Protocol] = Behaviors.receive {
+    case (_, FetchWork(id, replyTo)) =>
       allocated.get(id).foreach(a => replyTo ! PendingWorkStorage.Retry(id, a))
       Behaviors.same
-    case WorkAllocated(id, work) =>
+    case (_, WorkAllocated(id, work)) =>
       behaviorWithAllocatedWork(allocated + (id -> work))
+    case (ctx, RemoveWork(id)) =>
+      ctx.system.eventStream ! Publish(PendingWorkStorage.WorkCompleted(id))
+      behaviorWithAllocatedWork(allocated - id)
   }
 
   sealed trait Protocol
@@ -109,5 +120,5 @@ private object AllocatedWorkStorage {
                              ) extends Protocol
 
   case class FetchWork(id: UUID, replyTo: ActorRef[PendingWorkStorage.Retry[_]]) extends Protocol
-
+  case class RemoveWork(id: UUID) extends Protocol
 }
