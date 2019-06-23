@@ -10,24 +10,18 @@ lazy val flerken =
   (project in file("."))
     .settings(noPublishSettings)
     .aggregate(
-      reactiveWorker,
-      httpWorker
+      workScheduler,
+      workStorage
     )
 
-lazy val worker = (project in file("worker")).settings(
-  libraryDependencies ++= Worker.dependencies
+lazy val workScheduler = (project in file("scheduler")).settings(
+  libraryDependencies ++= Scheduler.dependencies
 ).settings(compilerSettings)
 
-lazy val reactiveWorker = (project in file("reactive-worker")).settings(
-  libraryDependencies ++= ReactiveWorker.dependencies
+lazy val workStorage = (project in file("storage")).settings(
+  libraryDependencies ++= Storage.dependencies
 ).settings(compilerSettings)
-  .dependsOn(worker)
 
-lazy val httpWorker = (project in file("http-worker"))
-  .settings(
-    libraryDependencies ++= HttpWorker.dependencies
-  ).settings(compilerSettings)
-  .dependsOn(worker, reactiveWorker)
 
 lazy val noPublishSettings = Seq(
   publish := {},

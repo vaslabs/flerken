@@ -13,7 +13,7 @@ object Dependencies {
     object Akka {
       val http = "10.1.8"
       val circeHttp = "1.25.2"
-      val main = "2.5.22"
+      val main = "2.6.0-M3"
     }
 
     object Circe {
@@ -54,16 +54,12 @@ object Dependencies {
 
   object Modules {
     import Libraries._
-    object Worker {
-      val dependencies = Seq(Cats.effect, Testing.scalatest, Testing.scalacheck)
+    object Scheduler {
+      val dependencies = Akka.actors ++ Seq(Cats.effect, Testing.scalatest, Testing.scalacheck)
     }
 
-    object ReactiveWorker {
-      val dependencies: Seq[ModuleID] = Akka.actors ++ Seq(Cats.effect, Testing.scalatest, Testing.scalacheck)
-    }
-
-    object HttpWorker {
-      val dependencies = Akka.http ++ Akka.actors ++ Circe.all ++ Seq(Testing.scalatest, Testing.scalacheck)
+    object Storage {
+      val dependencies = Akka.actors ++ Circe.all ++ Seq(Testing.scalatest, Testing.scalacheck)
     }
   }
 }
