@@ -13,7 +13,7 @@ class PendingWorkStorageSpec extends WordSpec with Matchers with AkkaBase {
   import PendingWorkStorage._
 
   "storage" must {
-    val storageConfig = StorageConfig(5 seconds, 2 seconds)
+    val storageConfig = StorageConfig(5 seconds, 2 seconds, 100)
     val sender = testKit.createTestProbe[Work]()
     val pendingWorkEventListener = testKit.createTestProbe[Event]()
     testKit.system.eventStream ! Subscribe(pendingWorkEventListener.ref)
@@ -31,7 +31,7 @@ class PendingWorkStorageSpec extends WordSpec with Matchers with AkkaBase {
     "assign identifiers to work added" in {
       val workSender = testKit.createTestProbe[WorkAck]()
       storage ! AddWork[String]("some work", workSender.ref)
-      val id = workSender.expectMessageType[WorkAck].identifier
+      val id = workSender.expectMessageType[WorkReceived].identifier
       firstWorkIdentifier.set(id)
     }
 
@@ -47,9 +47,9 @@ class PendingWorkStorageSpec extends WordSpec with Matchers with AkkaBase {
       val workSender = testKit.createTestProbe[WorkAck]()
 
       storage ! AddWork[String]("work 1", workSender.ref)
-      val work1UUID = workSender.expectMessageType[WorkAck].identifier
+      val work1UUID = workSender.expectMessageType[WorkReceived].identifier
       storage ! AddWork[String]("work 2", workSender.ref)
-      val work2UUID = workSender.expectMessageType[WorkAck].identifier
+      val work2UUID = workSender.expectMessageType[WorkReceived].identifier
 
       storage ! FetchWork(sender.ref)
       sender.expectMessage(DoWork(work1UUID, "work 1"))
@@ -85,7 +85,7 @@ class PendingWorkStorageSpec extends WordSpec with Matchers with AkkaBase {
     "expire the work when it becomes stale" in {
       val workSender = testKit.createTestProbe[WorkAck]()
       storage ! AddWork("work to become stale", workSender.ref)
-      val workId = workSender.expectMessageType[WorkAck].identifier
+      val workId = workSender.expectMessageType[WorkReceived].identifier
       pendingWorkEventListener.expectMessage(
         storageConfig.staleTimeout + 1.second, PendingWorkExpired(workId)
       )
@@ -96,7 +96,7 @@ class PendingWorkStorageSpec extends WordSpec with Matchers with AkkaBase {
     "re-schedule allocated work when it times out" in {
       val workSender = testKit.createTestProbe[WorkAck]()
       storage ! AddWork("work to timeout", workSender.ref)
-      val workId = workSender.expectMessageType[WorkAck].identifier
+      val workId = workSender.expectMessageType[WorkReceived].identifier
       storage ! FetchWork(sender.ref)
       sender.expectMessage(DoWork(workId, "work to timeout"))
       pendingWorkEventListener.expectMessage(

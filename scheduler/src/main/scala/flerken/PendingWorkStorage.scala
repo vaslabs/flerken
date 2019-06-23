@@ -25,7 +25,7 @@ object PendingWorkStorage {
         Behaviors.same
       case (ctx, AddWork(work, replyTo)) =>
         val identifier = UUID.randomUUID()
-        replyTo ! WorkAck(identifier)
+        replyTo ! WorkReceived(identifier)
         ctx.scheduleOnce(storageConfig.staleTimeout, ctx.self, ExpireWork(identifier))
 
         behaviorWithWork(
@@ -56,6 +56,58 @@ object PendingWorkStorage {
                   allocatedWorkStorage: ActorRef[AllocatedWorkStorage.Protocol],
                   storageConfig: StorageConfig): Behavior[Protocol] =
     Behaviors.receive[Protocol] {
+      case (_, FetchWork(_)) => Behaviors.unhandled
+      case (ctx, AddWork(work, replyTo)) =>
+        val identifier = UUID.randomUUID()
+        replyTo ! WorkReceived(identifier)
+
+        ctx.scheduleOnce(
+          storageConfig.staleTimeout,
+          ctx.self,
+          ExpireWork(identifier)
+        )
+
+        val newWorkQueue = pendingWork :+ PendingWork(identifier, work)
+        if (newWorkQueue.size >= storageConfig.highWatermark)
+          behaviorWithHighWatermark(newWorkQueue, allocatedWorkStorage, storageConfig)
+        else
+          behaviorWithWork(
+            newWorkQueue,
+            allocatedWorkStorage,
+            storageConfig
+          )
+      case (ctx, Retry(id, work)) =>
+        ctx.system.eventStream ! Publish(WorkRetry(id))
+        behaviorWithWork(pendingWork :+ PendingWork(id, work), allocatedWorkStorage, storageConfig)
+      case (_, CompleteWork(_)) => Behaviors.unhandled
+      case (_, WorkFailed(_)) => Behaviors.unhandled
+      case (_, ExpireWork(_)) => Behaviors.unhandled
+      case (_, WorkAllocationTimeout(_)) => Behaviors.unhandled
+    } orElse fetchWorkBehaviour(pendingWork, allocatedWorkStorage, storageConfig)
+
+  private def behaviorWithHighWatermark(
+              workQueue: NonEmptyList[PendingWorkStorage.PendingWork[_]],
+              allocatedWorkStorage: ActorRef[AllocatedWorkStorage.Protocol],
+              config: StorageConfig): Behavior[Protocol] = Behaviors.receive[Protocol] {
+    case (_, AddWork(_, replyTo)) =>
+      replyTo ! WorkRejected
+      Behaviors.same
+    case (ctx, Retry(id, work)) =>
+      ctx.system.eventStream ! Publish(WorkRetry(id))
+      behaviorWithHighWatermark(workQueue :+ PendingWork(id, work), allocatedWorkStorage, config)
+    case (_, ExpireWork(_)) =>
+      Behaviors.unhandled
+    case (_, FetchWork(_)) => Behaviors.unhandled
+    case (_, CompleteWork(_)) => Behaviors.unhandled
+    case (_, WorkFailed(_)) => Behaviors.unhandled
+    case (_, WorkAllocationTimeout(_)) => Behaviors.unhandled
+  } orElse fetchWorkBehaviour(workQueue, allocatedWorkStorage, config)
+
+  private def fetchWorkBehaviour(
+                                  pendingWork: NonEmptyList[PendingWork[_]],
+                                  allocatedWorkStorage: ActorRef[AllocatedWorkStorage.Protocol],
+                                  storageConfig: StorageConfig) = {
+    Behaviors.receivePartial[Protocol] {
       case (ctx, FetchWork(replyTo)) =>
         val pendingWorkHead = pendingWork.head
         replyTo ! DoWork(pendingWorkHead.uuid, pendingWorkHead.work)
@@ -69,42 +121,39 @@ object PendingWorkStorage {
           pendingWorkHead.work
         )
         NonEmptyList.fromList(pendingWork.tail)
-          .map(behaviorWithWork(_, allocatedWorkStorage, storageConfig))
+          .map(remainingWork =>
+            if (remainingWork.size >= storageConfig.highWatermark)
+              behaviorWithHighWatermark(remainingWork, allocatedWorkStorage, storageConfig)
+            else
+              behaviorWithWork(remainingWork, allocatedWorkStorage, storageConfig)
+          )
           .getOrElse(behaviorAfterSetup(allocatedWorkStorage, storageConfig))
-      case (ctx, AddWork(work, replyTo)) =>
-        val identifier = UUID.randomUUID()
-        replyTo ! WorkAck(identifier)
-
-        ctx.scheduleOnce(
-          storageConfig.staleTimeout,
-          ctx.self,
-          ExpireWork(identifier)
-        )
-
-        behaviorWithWork(
-          pendingWork :+ PendingWork(identifier, work),
-          allocatedWorkStorage,
-          storageConfig)
-      case (ctx, WorkFailed(identifier)) =>
-        allocatedWorkStorage ! AllocatedWorkStorage.FetchWork(identifier, ctx.self)
-        Behaviors.same
-      case (ctx, Retry(id, work)) =>
-        ctx.system.eventStream ! Publish(WorkRetry(id))
-        behaviorWithWork(pendingWork :+ PendingWork(id, work), allocatedWorkStorage, storageConfig)
-      case (_, CompleteWork(identifier)) =>
-        allocatedWorkStorage ! AllocatedWorkStorage.RemoveWork(identifier)
-        Behaviors.same
       case (ctx, ExpireWork(id)) =>
         val remainingWork = pendingWork.filterNot(_.uuid == id)
         if (remainingWork.size < pendingWork.size)
           ctx.system.eventStream ! Publish(PendingWorkExpired(id))
         NonEmptyList.fromList(remainingWork)
-          .map(behaviorWithWork(_, allocatedWorkStorage, storageConfig))
-        .getOrElse(behaviorAfterSetup(allocatedWorkStorage, storageConfig))
-      case (ctx, WorkAllocationTimeout(id)) =>
-        allocatedWorkStorage ! AllocatedWorkStorage.WorkTimeout(id, ctx.self)
-        Behaviors.same
+          .map(remainingWork =>
+            if (remainingWork.size >= storageConfig.highWatermark)
+              behaviorWithHighWatermark(remainingWork, allocatedWorkStorage, storageConfig)
+            else
+              behaviorWithWork(remainingWork, allocatedWorkStorage, storageConfig))
+          .getOrElse(behaviorAfterSetup(allocatedWorkStorage, storageConfig))
     }
+  } orElse manageAllocatedWorkStorageBehavior(allocatedWorkStorage)
+
+  private def manageAllocatedWorkStorageBehavior(
+                    allocatedWorkStorage: ActorRef[AllocatedWorkStorage.Protocol]) = Behaviors.receivePartial[Protocol] {
+    case (_, CompleteWork(identifier)) =>
+      allocatedWorkStorage ! AllocatedWorkStorage.RemoveWork(identifier)
+      Behaviors.same
+    case (ctx, WorkFailed(identifier)) =>
+      allocatedWorkStorage ! AllocatedWorkStorage.FetchWork(identifier, ctx.self)
+      Behaviors.same
+    case (ctx, WorkAllocationTimeout(id)) =>
+      allocatedWorkStorage ! AllocatedWorkStorage.WorkTimeout(id, ctx.self)
+      Behaviors.same
+  }
 
   private case class PendingWork[W](uuid: UUID, work: W)
 
@@ -127,7 +176,9 @@ object PendingWorkStorage {
 
   case class DoWork[W](id: UUID, work: W) extends Work
 
-  case class WorkAck(identifier: UUID)
+  sealed trait WorkAck
+  case class WorkReceived(identifier: UUID) extends WorkAck
+  case object WorkRejected extends WorkAck
 
   sealed trait Event
 
