@@ -5,5 +5,6 @@ import scala.concurrent.duration.FiniteDuration
 case class StorageConfig(
               staleTimeout: FiniteDuration,
               workCompletionTimeout: FiniteDuration,
-              highWatermark: Int
+              highWatermark: Int,
+              identifier: String
 )

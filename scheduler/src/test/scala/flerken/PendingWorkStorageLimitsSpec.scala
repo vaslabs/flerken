@@ -1,5 +1,6 @@
 package flerken
 
+import akka.actor.typed.eventstream.Subscribe
 import flerken.PendingWorkStorage._
 import org.scalatest.{Matchers, WordSpec}
 
@@ -9,7 +10,9 @@ import scala.util.Random
 class PendingWorkStorageLimitsSpec extends WordSpec with Matchers with AkkaBase {
 
   "work storage" must {
-    val storageConfig = StorageConfig(5 seconds, 1 second, 5)
+    val pendingWorkStorageEventListener = testKit.createTestProbe[Event]()
+    testKit.system.eventStream ! Subscribe(pendingWorkStorageEventListener.ref)
+    val storageConfig = StorageConfig(5 seconds, 1 second, 5, "PendingWorkStorageLimitsSpec")
     val storage = testKit.spawn(
       PendingWorkStorage.behavior(storageConfig),
       "PendingWorkStorage"
@@ -21,6 +24,8 @@ class PendingWorkStorageLimitsSpec extends WordSpec with Matchers with AkkaBase 
           storage ! PendingWorkStorage.AddWork(work, workSender.ref)
           workSender.expectMessageType[WorkReceived]
       }
+
+      pendingWorkStorageEventListener.expectMessage(HighWatermarkReached(storageConfig.identifier))
 
       storage ! PendingWorkStorage.AddWork("will be rejected", workSender.ref)
       workSender.expectMessage(PendingWorkStorage.WorkRejected)

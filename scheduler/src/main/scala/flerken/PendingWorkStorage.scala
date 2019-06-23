@@ -68,8 +68,10 @@ object PendingWorkStorage {
         )
 
         val newWorkQueue = pendingWork :+ PendingWork(identifier, work)
-        if (newWorkQueue.size >= storageConfig.highWatermark)
+        if (newWorkQueue.size >= storageConfig.highWatermark) {
+          ctx.system.eventStream ! Publish(HighWatermarkReached(storageConfig.identifier))
           behaviorWithHighWatermark(newWorkQueue, allocatedWorkStorage, storageConfig)
+        }
         else
           behaviorWithWork(
             newWorkQueue,
@@ -186,6 +188,7 @@ object PendingWorkStorage {
   case class WorkCompleted(id: UUID) extends Event
   case class PendingWorkExpired(id: UUID) extends Event
   case class WorkCompletionTimedOut(id: UUID) extends Event
+  case class HighWatermarkReached(identifier: String) extends Event
 
 }
 
