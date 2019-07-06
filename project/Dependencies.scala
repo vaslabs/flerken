@@ -13,7 +13,7 @@ object Dependencies {
     object Akka {
       val http = "10.1.8"
       val circeHttp = "1.25.2"
-      val main = "2.6.0-M3"
+      val main = "2.6.0-M4"
     }
 
     object Circe {
@@ -41,6 +41,9 @@ object Dependencies {
         "com.typesafe.akka" %% "akka-actor-typed" % Versions.Akka.main,
         "com.typesafe.akka" %% "akka-actor-testkit-typed" % Versions.Akka.main % Test
       )
+      val sharding = Seq(
+        "com.typesafe.akka" %% "akka-cluster-sharding-typed"
+      ).map(_ % Versions.Akka.main)
     }
 
     object Circe {
@@ -55,11 +58,11 @@ object Dependencies {
   object Modules {
     import Libraries._
     object Scheduler {
-      val dependencies = Akka.actors ++ Seq(Cats.effect, Testing.scalatest, Testing.scalacheck)
+      val dependencies = Akka.actors ++ Akka.sharding ++ Seq(Cats.effect, Testing.scalatest, Testing.scalacheck)
     }
 
     object Storage {
-      val dependencies = Akka.actors ++ Circe.all ++ Seq(Testing.scalatest, Testing.scalacheck)
+      val dependencies = Akka.actors ++ Akka.sharding ++ Circe.all ++ Seq(Testing.scalatest, Testing.scalacheck)
     }
   }
 }
