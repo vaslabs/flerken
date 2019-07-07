@@ -1,9 +1,9 @@
 package flerken
 
-import java.util.UUID
 import java.util.concurrent.atomic.AtomicReference
 
 import akka.actor.typed.eventstream.Subscribe
+import flerken.protocol.Protocol.{WorkId, WorkerId}
 import org.scalatest.{Matchers, WordSpec}
 
 import scala.concurrent.duration._
@@ -13,11 +13,11 @@ class PendingWorkStorageSpec extends WordSpec with Matchers with AkkaBase {
   import PendingWorkStorage._
 
   "storage" must {
-    val storageConfig = StorageConfig(5 seconds, 2 seconds, 100, "PendingWorkStorageSpec")
+    val storageConfig = StorageConfig(5 seconds, 2 seconds, 100, WorkerId("PendingWorkStorageSpec"))
     val sender = testKit.createTestProbe[Work]()
     val pendingWorkEventListener = testKit.createTestProbe[Event]()
     testKit.system.eventStream ! Subscribe(pendingWorkEventListener.ref)
-    val firstWorkIdentifier = new AtomicReference[UUID]()
+    val firstWorkIdentifier = new AtomicReference[WorkId]()
 
     val storage = testKit.spawn(PendingWorkStorage.behavior(storageConfig), "WorkStorage")
     "give no work if there is none" in {
@@ -31,7 +31,7 @@ class PendingWorkStorageSpec extends WordSpec with Matchers with AkkaBase {
     "assign identifiers to work added" in {
       val workSender = testKit.createTestProbe[WorkAck]()
       storage ! AddWork[String]("some work", workSender.ref)
-      val id = workSender.expectMessageType[WorkReceived].identifier
+      val id = workSender.expectMessageType[WorkReceived].id
       firstWorkIdentifier.set(id)
     }
 
@@ -47,20 +47,20 @@ class PendingWorkStorageSpec extends WordSpec with Matchers with AkkaBase {
       val workSender = testKit.createTestProbe[WorkAck]()
 
       storage ! AddWork[String]("work 1", workSender.ref)
-      val work1UUID = workSender.expectMessageType[WorkReceived].identifier
+      val work1Id = workSender.expectMessageType[WorkReceived].id
       storage ! AddWork[String]("work 2", workSender.ref)
-      val work2UUID = workSender.expectMessageType[WorkReceived].identifier
+      val work2Id = workSender.expectMessageType[WorkReceived].id
 
       storage ! FetchWork(sender.ref)
-      sender.expectMessage(DoWork(work1UUID, "work 1"))
+      sender.expectMessage(DoWork(work1Id, "work 1"))
       storage ! FetchWork(sender.ref)
-      sender.expectMessage(DoWork(work2UUID, "work 2"))
+      sender.expectMessage(DoWork(work2Id, "work 2"))
       storage ! FetchWork(sender.ref)
       sender.expectMessage(NoWork)
-      storage ! CompleteWork(work1UUID)
-      pendingWorkEventListener.expectMessage(WorkCompleted(work1UUID))
-      storage ! CompleteWork(work2UUID)
-      pendingWorkEventListener.expectMessage(WorkCompleted(work2UUID))
+      storage ! CompleteWork(work1Id)
+      pendingWorkEventListener.expectMessage(WorkCompleted(work1Id))
+      storage ! CompleteWork(work2Id)
+      pendingWorkEventListener.expectMessage(WorkCompleted(work2Id))
     }
 
     "re-scheduled any failed work" in {
@@ -85,7 +85,7 @@ class PendingWorkStorageSpec extends WordSpec with Matchers with AkkaBase {
     "expire the work when it becomes stale" in {
       val workSender = testKit.createTestProbe[WorkAck]()
       storage ! AddWork("work to become stale", workSender.ref)
-      val workId = workSender.expectMessageType[WorkReceived].identifier
+      val workId = workSender.expectMessageType[WorkReceived].id
       pendingWorkEventListener.expectMessage(
         storageConfig.staleTimeout + 1.second, PendingWorkExpired(workId)
       )
@@ -96,7 +96,7 @@ class PendingWorkStorageSpec extends WordSpec with Matchers with AkkaBase {
     "re-schedule allocated work when it times out" in {
       val workSender = testKit.createTestProbe[WorkAck]()
       storage ! AddWork("work to timeout", workSender.ref)
-      val workId = workSender.expectMessageType[WorkReceived].identifier
+      val workId = workSender.expectMessageType[WorkReceived].id
       storage ! FetchWork(sender.ref)
       sender.expectMessage(DoWork(workId, "work to timeout"))
       pendingWorkEventListener.expectMessage(

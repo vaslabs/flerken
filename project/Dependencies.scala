@@ -19,6 +19,11 @@ object Dependencies {
     object Circe {
       val core = "0.10.0"
     }
+
+    object Tapir {
+      val core = "0.8.9"
+    }
+
   }
 
   object Libraries {
@@ -28,6 +33,14 @@ object Dependencies {
     }
     object Cats {
       val effect = "org.typelevel" %% "cats-effect" % Versions.catsEffect
+    }
+
+    object Tapir {
+      val akka = Seq(
+        "com.softwaremill.tapir" %% "tapir-core",
+        "com.softwaremill.tapir" %% "tapir-akka-http-server",
+        "com.softwaremill.tapir" %% "tapir-json-circe"
+      ).map(_ % Versions.Tapir.core)
     }
 
     object Akka {
@@ -58,7 +71,9 @@ object Dependencies {
   object Modules {
     import Libraries._
     object Scheduler {
-      val dependencies = Akka.actors ++ Akka.sharding ++ Seq(Cats.effect, Testing.scalatest, Testing.scalacheck)
+      val dependencies =
+        Akka.actors ++ Akka.sharding ++ Akka.http ++ Tapir.akka ++
+        Circe.all ++ Seq(Cats.effect, Testing.scalatest, Testing.scalacheck)
     }
 
     object Storage {

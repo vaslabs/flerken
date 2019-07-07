@@ -8,6 +8,7 @@ import akka.actor.typed.{ActorRef, Behavior}
 import cats.data.NonEmptyList
 import flerken.PendingWorkStorage.Retry
 import AkkaExtras._
+import flerken.protocol.Protocol.{WorkId, WorkerId}
 object PendingWorkStorage {
 
   def behavior(storageConfig: StorageConfig): Behavior[Protocol] = Behaviors.setup[Protocol] { ctx =>
@@ -24,7 +25,7 @@ object PendingWorkStorage {
         replyTo ! NoWork
         Behaviors.same
       case (ctx, AddWork(work, replyTo)) =>
-        val identifier = UUID.randomUUID()
+        val identifier = WorkId(UUID.randomUUID())
         replyTo ! WorkReceived(identifier)
         ctx.scheduleOnce(storageConfig.staleTimeout, ctx.self, ExpireWork(identifier))
 
@@ -65,7 +66,7 @@ object PendingWorkStorage {
                   storageConfig: StorageConfig): PartialFunction[(ActorContext[Protocol], Protocol), Behavior[Protocol]] =
      {
       case (ctx, AddWork(work, replyTo)) =>
-        val identifier = UUID.randomUUID()
+        val identifier = WorkId(UUID.randomUUID())
         replyTo ! WorkReceived(identifier)
 
         ctx.scheduleOnce(
@@ -117,14 +118,14 @@ object PendingWorkStorage {
                                   storageConfig: StorageConfig): PartialHandlingWithContext[Protocol] = {
       case (ctx, FetchWork(replyTo)) =>
         val pendingWorkHead = pendingWork.head
-        replyTo ! DoWork(pendingWorkHead.uuid, pendingWorkHead.work)
+        replyTo ! DoWork(pendingWorkHead.id, pendingWorkHead.work)
         ctx.scheduleOnce(
           storageConfig.workCompletionTimeout,
           ctx.self,
-          WorkAllocationTimeout(pendingWorkHead.uuid)
+          WorkAllocationTimeout(pendingWorkHead.id)
         )
         allocatedWorkStorage ! AllocatedWorkStorage.WorkAllocated(
-          pendingWorkHead.uuid,
+          pendingWorkHead.id,
           pendingWorkHead.work
         )
         NonEmptyList.fromList(pendingWork.tail)
@@ -136,7 +137,7 @@ object PendingWorkStorage {
           )
           .getOrElse(handleNoWorkBehavior(allocatedWorkStorage, storageConfig))
       case (ctx, ExpireWork(id)) =>
-        val remainingWork = pendingWork.filterNot(_.uuid == id)
+        val remainingWork = pendingWork.filterNot(_.id == id)
         if (remainingWork.size < pendingWork.size)
           ctx.system.eventStream ! Publish(PendingWorkExpired(id))
         NonEmptyList.fromList(remainingWork)
@@ -161,7 +162,7 @@ object PendingWorkStorage {
       Behaviors.same
   }
 
-  private case class PendingWork[W](uuid: UUID, work: W)
+  private case class PendingWork[W](id: WorkId, work: W)
 
   sealed trait Protocol
 
@@ -169,30 +170,30 @@ object PendingWorkStorage {
 
   case class AddWork[W](work: W, replyTo: ActorRef[WorkAck]) extends Protocol
 
-  case class WorkFailed(identifier: UUID) extends Protocol
-  case class CompleteWork(identifier: UUID) extends Protocol
+  case class WorkFailed(id: WorkId) extends Protocol
+  case class CompleteWork(id: WorkId) extends Protocol
 
-  private[flerken] case class Retry[W](id: UUID, work: W) extends Protocol
-  private case class ExpireWork(uuid: UUID) extends Protocol
-  private case class WorkAllocationTimeout(uuid: UUID) extends Protocol
+  private[flerken] case class Retry[W](id: WorkId, work: W) extends Protocol
+  private case class ExpireWork(id: WorkId) extends Protocol
+  private case class WorkAllocationTimeout(id: WorkId) extends Protocol
 
   sealed trait Work
 
   case object NoWork extends Work
 
-  case class DoWork[W](id: UUID, work: W) extends Work
+  case class DoWork[W](id: WorkId, work: W) extends Work
 
   sealed trait WorkAck
-  case class WorkReceived(identifier: UUID) extends WorkAck
+  case class WorkReceived(id: WorkId) extends WorkAck
   case object WorkRejected extends WorkAck
 
   sealed trait Event
 
-  case class WorkRetry(id: UUID) extends Event
-  case class WorkCompleted(id: UUID) extends Event
-  case class PendingWorkExpired(id: UUID) extends Event
-  case class WorkCompletionTimedOut(id: UUID) extends Event
-  case class HighWatermarkReached(identifier: String) extends Event
+  case class WorkRetry(id: WorkId) extends Event
+  case class WorkCompleted(id: WorkId) extends Event
+  case class PendingWorkExpired(id: WorkId) extends Event
+  case class WorkCompletionTimedOut(id: WorkId) extends Event
+  case class HighWatermarkReached(worker: WorkerId) extends Event
 
 }
 
@@ -209,7 +210,7 @@ private object AllocatedWorkStorage {
       Behaviors.same
   }
 
-  def behaviorWithAllocatedWork(allocated: Map[UUID, _]): Behavior[Protocol] = Behaviors.receive {
+  def behaviorWithAllocatedWork(allocated: Map[WorkId, _]): Behavior[Protocol] = Behaviors.receive {
     case (_, FetchWork(id, replyTo)) =>
       allocated.get(id).foreach(a => replyTo ! PendingWorkStorage.Retry(id, a))
       Behaviors.same
@@ -230,11 +231,11 @@ private object AllocatedWorkStorage {
   sealed trait Protocol
 
   case class WorkAllocated[W](
-                               id: UUID,
+                               id: WorkId,
                                work: W
                              ) extends Protocol
 
-  case class FetchWork(id: UUID, replyTo: ActorRef[PendingWorkStorage.Retry[_]]) extends Protocol
-  case class RemoveWork(id: UUID) extends Protocol
-  case class WorkTimeout(id: UUID, replyTo: ActorRef[PendingWorkStorage.Retry[_]]) extends Protocol
+  case class FetchWork(id: WorkId, replyTo: ActorRef[PendingWorkStorage.Retry[_]]) extends Protocol
+  case class RemoveWork(id: WorkId) extends Protocol
+  case class WorkTimeout(id: WorkId, replyTo: ActorRef[PendingWorkStorage.Retry[_]]) extends Protocol
 }

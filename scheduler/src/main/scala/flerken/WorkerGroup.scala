@@ -2,9 +2,9 @@ package flerken
 
 import akka.actor.typed.ActorRef
 import akka.cluster.sharding.typed.ShardingMessageExtractor
-import akka.cluster.sharding.typed.scaladsl.{ClusterSharding, EntityTypeKey}
-import akka.cluster.sharding.typed.scaladsl.Entity
+import akka.cluster.sharding.typed.scaladsl.{ClusterSharding, Entity, EntityTypeKey}
 import flerken.PendingWorkStorage.WorkAck
+import flerken.protocol.Protocol.WorkerId
 
 object WorkerGroup {
 
@@ -41,5 +41,4 @@ object WorkerGroup {
   case class AssignWorkTo(workerId: WorkerId, replyTo: ActorRef[Any]) extends Protocol
   case class StoreWorkFor[W](workerId: WorkerId, work: W, replyTo: ActorRef[WorkAck]) extends Protocol
 
-  case class WorkerId(id: String) extends AnyVal
 }
