@@ -1,28 +1,29 @@
 package flerken.http
 
-import java.util.UUID
 
 import akka.http.scaladsl.server.Directives._
+import flerken.SchedulerApi
 import flerken.protocol.Protocol._
 import tapir.Codec.PlainCodec
 import tapir.model.StatusCodes
 
-import scala.concurrent.Future
-
-class SchedulerHttp() {
+trait SchedulerHttp { schedulerApi: SchedulerApi =>
   import tapir.server.akkahttp._
 
 
   val route =
     SchedulerEndpoints.fetchWorkEndpoint.toRoute {
-      _ =>
-        Future.successful(Left(()))
+      workerId =>
+        schedulerApi.fetchWork(workerId)
     } ~ SchedulerEndpoints.postWorkEndpoint.toRoute {
-      _ =>
-        Future.successful(Right(WorkId(UUID.randomUUID)))
+      work =>
+        schedulerApi.storeWork(work)
     } ~ SchedulerEndpoints.workResultEndpoint.toRoute {
       workId =>
-        Future.successful(Right(WorkResult.pending(workId)))
+        schedulerApi.fetchWorkResult(workId)
+    } ~ SchedulerEndpoints.acceptResultEndpoint.toRoute {
+      storeWorkResult =>
+        schedulerApi.storeWorkResult(storeWorkResult)
     }
 
 
@@ -64,6 +65,17 @@ object SchedulerEndpoints {
     .errorOut(statusCode(StatusCodes.NotFound))
     .out(oneOf(statusMapping[WorkResult](StatusCodes.Ok, jsonBody[WorkResult])))
 
+  val acceptResultEndpoint: Endpoint[StoreWorkResult, ResultRejected, Unit, Nothing] =
+    endpoint.put.in("work")
+    .description("Set the result of a given work")
+    .in(jsonBody[StoreWorkResult])
+    .errorOut(
+      oneOf(
+        statusMapping(StatusCodes.NotFound, jsonBody[ResultRejected]),
+        statusMapping(StatusCodes.AlreadyReported, jsonBody[ResultRejected])
+      )
+    )
+    .out(statusCode(StatusCodes.Accepted))
 
 
 }

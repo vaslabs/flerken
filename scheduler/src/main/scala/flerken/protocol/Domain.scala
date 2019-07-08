@@ -12,8 +12,11 @@ object Protocol {
   case class Work(workId: WorkId, payload: Json)
   case class StoreWork(workerId: WorkerId, work: Json)
 
+  case class StoreWorkResult(workId: WorkId, result: Json)
+
   sealed trait WorkStatus
   case object Pending extends WorkStatus
+  case object Completed extends WorkStatus
 
 
   sealed trait WorkResult {
@@ -22,8 +25,13 @@ object Protocol {
   }
 
   object WorkResult {
+    def completed(id: WorkId, result: Json) = CompletedWorkResult(id, Completed, result)
+
     def pending(workId: WorkId) = UncompletedWorkResult(workId, Pending)
   }
 
   case class UncompletedWorkResult (workId: WorkId, status: WorkStatus) extends WorkResult
+  case class CompletedWorkResult(workId: WorkId, status: WorkStatus, result: Json) extends WorkResult
+
+  case class ResultRejected(reason: String)
 }
