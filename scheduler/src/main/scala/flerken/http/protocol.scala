@@ -1,7 +1,7 @@
 package flerken.http
 
 import flerken.protocol.Protocol._
-import io.circe.{Decoder, Encoder}
+import io.circe.{Decoder, Encoder, Json}
 
 object json_support {
   import io.circe.generic.semiauto._
@@ -30,17 +30,26 @@ object json_support {
         workId <- hCursor.downField("workId").as[WorkId]
         result = status match {
           case Pending => WorkResult.pending(workId)
+          case Completed =>
+            val payload = hCursor.downField("result").as[Json].getOrElse(Json.obj())
+            WorkResult.completed(workId, payload)
         }
-      } yield (result)
+      } yield result
   }
 
   implicit val workResultEncoder: Encoder[WorkResult] = Encoder.instance {
     case uwr: UncompletedWorkResult => uncompletedWorkResultEncoder(uwr)
+    case completedWorkResult: CompletedWorkResult => deriveEncoder[CompletedWorkResult].apply(completedWorkResult)
   }
 
 
   implicit val storeWorkEncoder: Encoder[StoreWork] = deriveEncoder[StoreWork]
   implicit val storeWorkDecoder: Decoder[StoreWork] = deriveDecoder[StoreWork]
 
+  implicit val storeWorkResultEncoder: Encoder[StoreWorkResult] = deriveEncoder[StoreWorkResult]
+  implicit val storeWorkResultDecoder: Decoder[StoreWorkResult] = deriveDecoder[StoreWorkResult]
+
+  implicit val resultRejectedEncoder: Encoder[ResultRejected] = deriveEncoder[ResultRejected]
+  implicit val resultRejectedDecoder: Decoder[ResultRejected] = deriveDecoder[ResultRejected]
 
 }

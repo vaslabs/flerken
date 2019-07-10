@@ -1,4 +1,5 @@
 import Dependencies.Modules._
+import com.typesafe.sbt.packager.docker.DockerVersion
 
 name := "reactive-storage"
 
@@ -10,18 +11,14 @@ lazy val flerken =
   (project in file("."))
     .settings(noPublishSettings)
     .aggregate(
-      workScheduler,
-      workStorage
+      workScheduler
     )
 
 lazy val workScheduler = (project in file("scheduler")).settings(
   libraryDependencies ++= Scheduler.dependencies
 ).settings(compilerSettings)
-
-lazy val workStorage = (project in file("storage")).settings(
-  libraryDependencies ++= Storage.dependencies
-).settings(compilerSettings)
-
+  .enablePlugins(dockerPlugins: _*)
+  .settings(noPublishSettings).settings(dockerCommonSettings)
 
 lazy val noPublishSettings = Seq(
   publish := {},
@@ -56,3 +53,16 @@ lazy val compilerSettings = {
     "-Xfatal-warnings"
   )
 }
+
+lazy val dockerCommonSettings = Seq(
+  version in Docker := version.value,
+  maintainer in Docker := "Vasilis Nicolaou",
+  dockerBaseImage := "openjdk:8-alpine",
+  dockerExposedPorts := Seq(8080),
+  maintainer := "vaslabsco@gmail.com",
+  dockerUsername := Some("vaslabs"),
+)
+
+lazy val dockerPlugins = Seq(DockerPlugin, AshScriptPlugin, JavaAppPackaging, UniversalPlugin)
+
+addCommandAlias("reportTestCov", ";project workScheduler; coverageReport; coverageAggregate; codacyCoverage")

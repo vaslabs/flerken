@@ -11,6 +11,8 @@ object Dependencies {
       val scalacheck = "1.14.0"
     }
     object Akka {
+      val management = "1.0.1"
+
       val http = "10.1.8"
       val circeHttp = "1.25.2"
       val main = "2.6.0-M4"
@@ -55,8 +57,13 @@ object Dependencies {
         "com.typesafe.akka" %% "akka-actor-testkit-typed" % Versions.Akka.main % Test
       )
       val sharding = Seq(
-        "com.typesafe.akka" %% "akka-cluster-sharding-typed"
+        "com.typesafe.akka" %% "akka-cluster-sharding-typed",
       ).map(_ % Versions.Akka.main)
+
+      val clusterEssentials = Seq(
+        "com.typesafe.akka" %% "akka-discovery" % Versions.Akka.main,
+        "com.lightbend.akka.management" %% "akka-management" % Versions.Akka.management
+      )
     }
 
     object Circe {
@@ -73,7 +80,8 @@ object Dependencies {
     object Scheduler {
       val dependencies =
         Akka.actors ++ Akka.sharding ++ Akka.http ++ Tapir.akka ++
-        Circe.all ++ Seq(Cats.effect, Testing.scalatest, Testing.scalacheck)
+        Circe.all ++ Seq(Cats.effect, Testing.scalatest, Testing.scalacheck) ++
+        Akka.clusterEssentials
     }
 
     object Storage {
