@@ -17,7 +17,7 @@ class IntegrationTest extends WordSpec with Matchers{
 
   "scheduler" must {
 
-    "give empty work" in {
+    "tell workers there is no work" in {
 
       implicit val arbitraryWorkerId = arbitraryWorker
 
@@ -25,7 +25,7 @@ class IntegrationTest extends WordSpec with Matchers{
         uri
       )
     }
-    "post some work" in {
+    "send some work to a worker, when such becomes available" in {
 
       val (storeWork, workId) = chain(SchedulerEndpoints.postWorkEndpoint)(uri)
       workId should matchPattern {
@@ -35,7 +35,7 @@ class IntegrationTest extends WordSpec with Matchers{
       assertion(SchedulerEndpoints.fetchWorkEndpoint, Right(SomeWork(workId.right.get, storeWork.work)))(uri)
     }
 
-    "accept the result" in {
+    "store the outcome of the work" in {
       val (postedResult, _) = chainedAssertion(SchedulerEndpoints.acceptResultEndpoint, Right(()))(uri)
       implicit val arbitraryWorkId = Arbitrary(Gen.const(postedResult.workId))
       assertion(
