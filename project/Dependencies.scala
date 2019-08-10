@@ -6,6 +6,8 @@ object Dependencies {
     val catsEffect = "1.3.1"
 
     object Testing {
+      val scalacheckShapeless = "1.2.3"
+
       val scalatest = "3.0.5"
       val scalacheck = "1.14.0"
     }
@@ -33,6 +35,10 @@ object Dependencies {
     object Testing {
       val scalatest = "org.scalatest" %% "scalatest" % Versions.Testing.scalatest
       val scalacheck = "org.scalacheck" %% "scalacheck" % Versions.Testing.scalacheck
+      val scalacheckShapless =
+        "com.github.alexarchambault" %%
+        "scalacheck-shapeless_1.14" %
+          Versions.Testing.scalacheckShapeless
     }
     object Cats {
       val effect = "org.typelevel" %% "cats-effect" % Versions.catsEffect
@@ -95,7 +101,7 @@ object Dependencies {
 
     object SchedulerIntegrationTests {
       val dependencies = Tapir.akka ++
-        Circe.all ++ Seq(Cats.effect, Testing.scalatest, Testing.scalacheck)
+        Circe.all ++ Seq(Cats.effect, Testing.scalatest, Testing.scalacheck, Testing.scalacheckShapless % Test)
     }
   }
 }
