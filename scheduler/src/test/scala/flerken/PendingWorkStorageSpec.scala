@@ -2,7 +2,7 @@ package flerken
 
 import java.util.concurrent.atomic.AtomicReference
 
-import akka.actor.typed.eventstream.Subscribe
+import akka.actor.typed.eventstream.EventStream.Subscribe
 import flerken.protocol.Protocol.{WorkId, WorkerId}
 import org.scalatest.{Matchers, WordSpec}
 

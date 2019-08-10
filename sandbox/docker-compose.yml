@@ -1,6 +1,7 @@
 version: '3'
 services:
   scheduler-node-a:
+    container_name: scheduler-node-a
     image: vaslabs/workscheduler:0.1.0-SNAPSHOT
     ports:
     - "8080:8080"
@@ -9,8 +10,9 @@ services:
       - ./scheduler-node-a/config:/opt/docker/conf:z
   scheduler-node-b:
     image: vaslabs/workscheduler:0.1.0-SNAPSHOT
+    container_name: scheduler-node-b
     ports:
       - "8081:8080"
       - "8559:8558"
     volumes:
-      - ./scheduler-node-a/config:/opt/docker/conf:z
+      - ./scheduler-node-b/config:/opt/docker/conf:z

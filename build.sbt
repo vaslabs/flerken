@@ -1,11 +1,10 @@
 import Dependencies.Modules._
-import com.typesafe.sbt.packager.docker.DockerVersion
 
 name := "reactive-storage"
 
 version := "0.1"
 
-scalaVersion := "2.12.8"
+scalaVersion := "2.12.9"
 
 lazy val flerken =
   (project in file("."))

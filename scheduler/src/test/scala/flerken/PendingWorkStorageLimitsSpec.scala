@@ -1,6 +1,6 @@
 package flerken
 
-import akka.actor.typed.eventstream.Subscribe
+import akka.actor.typed.eventstream.EventStream.Subscribe
 import flerken.PendingWorkStorage._
 import flerken.protocol.Protocol.WorkerId
 import org.scalatest.{Matchers, WordSpec}

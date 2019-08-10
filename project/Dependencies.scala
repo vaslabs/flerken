@@ -4,7 +4,7 @@ import sbt._
 object Dependencies {
 
   object Versions {
-    val catsEffect = "1.2.0"
+    val catsEffect = "1.3.1"
 
     object Testing {
       val scalatest = "3.0.5"
@@ -13,13 +13,13 @@ object Dependencies {
     object Akka {
       val management = "1.0.1"
 
-      val http = "10.1.8"
+      val http = "10.1.9"
       val circeHttp = "1.25.2"
-      val main = "2.6.0-M4"
+      val main = "2.6.0-M5"
     }
 
     object Circe {
-      val core = "0.10.0"
+      val core = "0.11.1"
     }
 
     object Tapir {
@@ -41,7 +41,8 @@ object Dependencies {
       val akka = Seq(
         "com.softwaremill.tapir" %% "tapir-core",
         "com.softwaremill.tapir" %% "tapir-akka-http-server",
-        "com.softwaremill.tapir" %% "tapir-json-circe"
+        "com.softwaremill.tapir" %% "tapir-json-circe",
+        "com.softwaremill.tapir" %% "tapir-sttp-client"
       ).map(_ % Versions.Tapir.core)
     }
 
@@ -62,7 +63,9 @@ object Dependencies {
 
       val clusterEssentials = Seq(
         "com.typesafe.akka" %% "akka-discovery" % Versions.Akka.main,
-        "com.lightbend.akka.management" %% "akka-management" % Versions.Akka.management
+        "com.lightbend.akka.management" %% "akka-management" % Versions.Akka.management,
+        "com.lightbend.akka.management" %% "akka-management-cluster-http" % Versions.Akka.management,
+        "com.lightbend.akka.management" %% "akka-management-cluster-bootstrap" % Versions.Akka.management
       )
     }
 

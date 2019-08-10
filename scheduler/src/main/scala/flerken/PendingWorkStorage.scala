@@ -2,7 +2,7 @@ package flerken
 
 import java.util.UUID
 
-import akka.actor.typed.eventstream.Publish
+import akka.actor.typed.eventstream.EventStream.Publish
 import akka.actor.typed.scaladsl.{ActorContext, Behaviors}
 import akka.actor.typed.{ActorRef, Behavior}
 import cats.data.NonEmptyList
