@@ -1,33 +1,31 @@
-# Scala CircleCI 2.0 configuration file
-#
-# Check https://circleci.com/docs/2.0/sample-config/ for more details
-#
 version: 2
 jobs:
   build:
+    working_directory: ~/flerken
     docker:
-      # specify the version you desire here
-      - image: hseeberger/scala-sbt
-
-    working_directory: ~/repo
-
+      - image: openjdk:8
     environment:
-      JVM_OPTS: -Xmx2G -Xss4M
-      TERM: dumb
-
+      SBT_VERSION: 1.2.8
     steps:
+      - run: echo 'export ARTIFACT_BUILD=$CIRCLE_PROJECT_REPONAME-$CIRCLE_BUILD_NUM.zip' >> $BASH_ENV
+      - run:
+          name: Get sbt binary
+          command: |
+            apt update && apt install -y curl
+            curl -L -o sbt-$SBT_VERSION.deb https://dl.bintray.com/sbt/debian/sbt-$SBT_VERSION.deb
+            dpkg -i sbt-$SBT_VERSION.deb
+            rm sbt-$SBT_VERSION.deb
+            apt-get update
       - checkout
-
       - restore_cache:
-          keys:
-            - v1-dependencies-{{ checksum "build.sbt" }}
-            - v1-dependencies-
-
-      - run: cat /dev/null | sbt test:compile
-
+          # Read about caching dependencies: https://circleci.com/docs/2.0/caching/
+          key: sbt-cache
+      - run:
+          name: Test flerken
+          command: cat /dev/null | sbt clean test
       - save_cache:
+          key: sbt-cache
           paths:
-            - ~/.m2
-          key: v1-dependencies--{{ checksum "build.sbt" }}
-
-      - run: cat /dev/null | sbt test
+            - "~/.ivy2/cache"
+            - "~/.sbt"
+            - "~/.m2"
