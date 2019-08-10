@@ -22,9 +22,10 @@ class ActorBasedSchedulerApi(
 
   override def fetchWork(workerId: Protocol.WorkerId): Future[Either[Unit, Protocol.Work]] =
     (workStorage ?[Work] (ref => WorkerGroup.AssignWorkTo(workerId, ref))).map {
-      case NoWork => Left(())
+      case NoWork =>
+        Right(Protocol.NoWork)
       case DoWork(id, json: Json) =>
-        Right(Protocol.Work(id, json))
+        Right(Protocol.SomeWork(id, json))
       case _ =>
         Left(())
     }

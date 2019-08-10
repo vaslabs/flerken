@@ -30,12 +30,14 @@ trait SchedulerHttp { schedulerApi: SchedulerApi =>
 }
 
 object SchedulerEndpoints {
+  import io.circe.generic.auto._
   import json_support._
   import tapir._
   import tapir.json.circe._
 
   implicit val workIDCodec: PlainCodec[WorkId] = Codec.uuidPlainCodec.map(WorkId)(_.value)
   implicit val workerIDCodec: PlainCodec[WorkerId] = Codec.stringPlainCodecUtf8.map(WorkerId)(_.id)
+  implicit val noWorkCodec: PlainCodec[NoWork.type] = Codec.stringPlainCodecUtf8.map(_ => NoWork)(_ => "")
 
   val fetchWorkEndpoint: Endpoint[WorkerId, Unit, Work, Nothing] =
     endpoint
@@ -43,9 +45,14 @@ object SchedulerEndpoints {
       .name("Fetch work")
       .get
       .errorOut(
-        statusCode(StatusCodes.NoContent)
+        statusCode(StatusCodes.NotFound)
       )
-      .out(jsonBody[Work])
+      .out(oneOf[Work](
+        statusMapping(StatusCodes.Ok, jsonBody[SomeWork]),
+        statusMapping[NoWork.type](
+          StatusCodes.NoContent, plainBody[NoWork.type]
+        )
+      ))
 
   val postWorkEndpoint: Endpoint[StoreWork, Unit, WorkId, Nothing] =
     endpoint.in("work")

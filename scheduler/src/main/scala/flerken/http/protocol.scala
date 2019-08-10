@@ -6,8 +6,10 @@ import io.circe.{Decoder, Encoder, Json}
 object json_support {
   import io.circe.generic.semiauto._
   import io.circe.generic.auto._
+
   implicit val workEncoder: Encoder[Work] = deriveEncoder[Work]
   implicit val workDecoder: Decoder[Work] = deriveDecoder[Work]
+
 
   implicit val workerIdEncoder: Encoder[WorkerId] = Encoder.encodeString.contramap(_.id)
   implicit val workerIdDecoder: Decoder[WorkerId] = Decoder.decodeString.map(WorkerId)

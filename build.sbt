@@ -19,6 +19,13 @@ lazy val workScheduler = (project in file("scheduler")).settings(
   .enablePlugins(dockerPlugins: _*)
   .settings(noPublishSettings).settings(dockerCommonSettings)
 
+lazy val schedulerIntegrationTests = (project in file("scheduler-integration-tests"))
+  .settings(
+    libraryDependencies ++= SchedulerIntegrationTests.dependencies
+  ).settings(compilerSettings)
+  .settings(noPublishSettings)
+  .dependsOn(workScheduler)
+
 lazy val noPublishSettings = Seq(
   publish := {},
   skip in publish := true,

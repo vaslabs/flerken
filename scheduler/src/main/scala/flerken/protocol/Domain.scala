@@ -9,7 +9,10 @@ object Protocol {
 
   case class WorkId(value: UUID) extends AnyVal
 
-  case class Work(workId: WorkId, payload: Json)
+  sealed trait Work
+  case class SomeWork(workId: WorkId, payload: Json) extends Work
+  case object NoWork extends Work
+
   case class StoreWork(workerId: WorkerId, work: Json)
 
   case class StoreWorkResult(workId: WorkId, result: Json)

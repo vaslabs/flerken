@@ -1,4 +1,3 @@
-import Dependencies._
 import sbt._
 
 object Dependencies {
@@ -18,6 +17,8 @@ object Dependencies {
       val main = "2.6.0-M5"
     }
 
+    val twitterChill = "0.9.3"
+
     object Circe {
       val core = "0.11.1"
     }
@@ -30,8 +31,8 @@ object Dependencies {
 
   object Libraries {
     object Testing {
-      val scalatest = "org.scalatest" %% "scalatest" % Versions.Testing.scalatest % Test
-      val scalacheck = "org.scalacheck" %% "scalacheck" % Versions.Testing.scalacheck % Test
+      val scalatest = "org.scalatest" %% "scalatest" % Versions.Testing.scalatest
+      val scalacheck = "org.scalacheck" %% "scalacheck" % Versions.Testing.scalacheck
     }
     object Cats {
       val effect = "org.typelevel" %% "cats-effect" % Versions.catsEffect
@@ -67,6 +68,11 @@ object Dependencies {
         "com.lightbend.akka.management" %% "akka-management-cluster-http" % Versions.Akka.management,
         "com.lightbend.akka.management" %% "akka-management-cluster-bootstrap" % Versions.Akka.management
       )
+      object twitterChill {
+        val chill = "com.twitter" %% "chill" % Versions.twitterChill
+        val chillAkka = "com.twitter" %% "chill-akka" % Versions.twitterChill
+        val needed = Seq(chill, chillAkka)
+      }
     }
 
     object Circe {
@@ -83,12 +89,13 @@ object Dependencies {
     object Scheduler {
       val dependencies =
         Akka.actors ++ Akka.sharding ++ Akka.http ++ Tapir.akka ++
-        Circe.all ++ Seq(Cats.effect, Testing.scalatest, Testing.scalacheck) ++
-        Akka.clusterEssentials
+        Circe.all ++ Seq(Cats.effect, Testing.scalatest % Test, Testing.scalacheck % Test) ++
+        Akka.clusterEssentials ++ Akka.twitterChill.needed
     }
 
-    object Storage {
-      val dependencies = Akka.actors ++ Akka.sharding ++ Circe.all ++ Seq(Testing.scalatest, Testing.scalacheck)
+    object SchedulerIntegrationTests {
+      val dependencies = Tapir.akka ++
+        Circe.all ++ Seq(Cats.effect, Testing.scalatest, Testing.scalacheck)
     }
   }
 }
