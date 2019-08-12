@@ -13,7 +13,7 @@ class IntegrationTest extends WordSpec with Matchers{
 
   import DataGenerator._
 
-  val uri =  Uri.apply("http", "localhost", 8080)
+  val uri =  Uri.apply("http", "scheduler-node-a", 8080)
 
   "scheduler" must {
 

@@ -8,6 +8,8 @@ services:
     - "8558:8558"
     volumes:
       - ./scheduler-node-a/config:/opt/docker/conf:z
+    networks:
+      - scheduler
   scheduler-node-b:
     image: vaslabs/workscheduler:0.1.0-SNAPSHOT
     container_name: scheduler-node-b
@@ -16,3 +18,10 @@ services:
       - "8559:8558"
     volumes:
       - ./scheduler-node-b/config:/opt/docker/conf:z
+    networks:
+      - scheduler
+
+
+networks:
+  scheduler:
+    driver: bridge

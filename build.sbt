@@ -1,4 +1,6 @@
 import Dependencies.Modules._
+import sbtregressionsuite._
+import sbtregressionsuite.RegressionSuiteKeys._
 
 name := "reactive-storage"
 
@@ -25,6 +27,15 @@ lazy val schedulerIntegrationTests = (project in file("scheduler-integration-tes
   ).settings(compilerSettings)
   .settings(noPublishSettings)
   .dependsOn(workScheduler)
+  .enablePlugins(RegressionSuitePlugin)
+  .settings(
+    Seq(
+      dockerImage in regression := "vaslabs/flerken-regression",
+      newVersion in regression := version.value,
+      testCommand in regression := Seq("sbt" ,"schedulerIntegrationTests/test"),
+      dockerNetwork in regression := Some("scheduler")
+    )
+  )
 
 lazy val noPublishSettings = Seq(
   publish := {},
@@ -70,5 +81,3 @@ lazy val dockerCommonSettings = Seq(
 )
 
 lazy val dockerPlugins = Seq(DockerPlugin, AshScriptPlugin, JavaAppPackaging, UniversalPlugin)
-
-addCommandAlias("reportTestCov", ";project workScheduler; coverageReport; coverageAggregate; codacyCoverage")

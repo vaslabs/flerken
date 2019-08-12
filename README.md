@@ -10,6 +10,7 @@ docker-compose up
 sbt schedulerIntegrationTests/test
 ```
 
+
 ## Motivation
 To give the means to companies or individuals who cannot maintain a Kafka cluster (or derivatives) achieve similar results.
 
