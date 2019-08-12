@@ -33,7 +33,7 @@ lazy val schedulerIntegrationTests = (project in file("scheduler-integration-tes
       dockerImage in regression := "vaslabs/flerken-regression",
       newVersion in regression := version.value,
       testCommand in regression := Seq("sbt" ,"schedulerIntegrationTests/test"),
-      dockerNetwork in regression := Some("scheduler")
+      dockerNetwork in regression := Some("sandbox_scheduler")
     )
   )
 
