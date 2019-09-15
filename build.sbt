@@ -17,6 +17,10 @@ lazy val flerken =
 lazy val workScheduler = (project in file("scheduler")).settings(
   libraryDependencies ++= Scheduler.dependencies
 ).settings(compilerSettings)
+  .enablePlugins(GitVersioning)
+  .settings(
+    git.useGitDescribe := true
+  )
   .enablePlugins(dockerPlugins: _*)
   .settings(noPublishSettings).settings(dockerCommonSettings)
 
