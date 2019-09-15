@@ -2,6 +2,7 @@ package flerken
 
 import akka.actor.typed.scaladsl.Behaviors
 import akka.actor.typed.scaladsl.adapter._
+import akka.http.scaladsl.server.Directives._
 import akka.actor.typed.{ActorSystem, PostStop}
 import akka.cluster.sharding.typed.scaladsl.ClusterSharding
 import akka.http.scaladsl.Http
@@ -37,7 +38,7 @@ object Bootstrap extends IOApp{
       api =>
         implicit val actorMaterializer = ActorMaterializer()
 
-        val server = IO.fromFuture(IO(Http().bindAndHandle(api.route, "0.0.0.0", 8080))).unsafeToFuture()
+        val server = IO.fromFuture(IO(Http().bindAndHandle(api.route ~ api.docsRoute, "0.0.0.0", 8080))).unsafeToFuture()
         server
     }
 

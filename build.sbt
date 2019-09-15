@@ -1,5 +1,4 @@
 import Dependencies.Modules._
-import sbtregressionsuite._
 import sbtregressionsuite.RegressionSuiteKeys._
 
 name := "reactive-storage"

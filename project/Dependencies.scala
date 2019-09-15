@@ -26,7 +26,7 @@ object Dependencies {
     }
 
     object Tapir {
-      val core = "0.8.9"
+      val core = "0.11.0"
     }
 
   }
@@ -49,8 +49,15 @@ object Dependencies {
         "com.softwaremill.tapir" %% "tapir-core",
         "com.softwaremill.tapir" %% "tapir-akka-http-server",
         "com.softwaremill.tapir" %% "tapir-json-circe",
-        "com.softwaremill.tapir" %% "tapir-sttp-client"
+        "com.softwaremill.tapir" %% "tapir-sttp-client",
       ).map(_ % Versions.Tapir.core)
+
+      val openApi = Seq(
+        "com.softwaremill.tapir" %% "tapir-openapi-docs",
+        "com.softwaremill.tapir" %% "tapir-openapi-circe-yaml",
+        "com.softwaremill.tapir" %% "tapir-swagger-ui-akka-http"
+      ).map(_ % Versions.Tapir.core)
+
     }
 
     object Akka {
@@ -65,7 +72,7 @@ object Dependencies {
         "com.typesafe.akka" %% "akka-actor-testkit-typed" % Versions.Akka.main % Test
       )
       val sharding = Seq(
-        "com.typesafe.akka" %% "akka-cluster-sharding-typed",
+        "com.typesafe.akka" %% "akka-cluster-sharding-typed"
       ).map(_ % Versions.Akka.main)
 
       val clusterEssentials = Seq(
@@ -94,13 +101,13 @@ object Dependencies {
     import Libraries._
     object Scheduler {
       val dependencies =
-        Akka.actors ++ Akka.sharding ++ Akka.http ++ Tapir.akka ++
+        Akka.actors ++ Akka.sharding ++ Akka.http ++ Tapir.akka ++ Tapir.openApi ++
         Circe.all ++ Seq(Cats.effect, Testing.scalatest % Test, Testing.scalacheck % Test) ++
         Akka.clusterEssentials ++ Akka.twitterChill.needed
     }
 
     object SchedulerIntegrationTests {
-      val dependencies = Tapir.akka ++
+      val dependencies = Tapir.akka ++ Tapir.openApi ++
         Circe.all ++ Seq(Cats.effect, Testing.scalatest, Testing.scalacheck, Testing.scalacheckShapless % Test)
     }
   }
