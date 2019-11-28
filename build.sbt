@@ -101,8 +101,8 @@ lazy val deploymentSettings = Seq(
     EnvName("FLERKEN_NAMESPACE") -> EnvFieldValue("metadata.namespace"),
     EnvName("DISCOVERY_METHOD") -> EnvRawValue("kubernetes-api")
   ),
-  livenessProbe in kube = HttpProbe(HttpGet("/alive", 8558, List.empty), 10 seconds, 3 seconds, 5 seconds, 3, 1),
-  readinessProbe in kube = HttpProbe(HttpGet("/ready", 8558, List.empty), 10 seconds, 3 seconds, 5 seconds, 3, 1),
+  livenessProbe in kube := HttpProbe(HttpGet("/alive", 8558, List.empty), 10 seconds, 3 seconds, 5 seconds, 3, 1),
+  readinessProbe in kube := HttpProbe(HttpGet("/ready", 8558, List.empty), 10 seconds, 3 seconds, 5 seconds, 3, 1),
   resourceLimits := Resource(Cpu(2), Memory(2048 + 256))
 )
 
