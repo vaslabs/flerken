@@ -17,7 +17,7 @@ publish:
     - curl -sSL https://get.docker.com/ | sh
     - docker login -u gitlab-ci-token -p $CI_JOB_TOKEN $CI_REGISTRY
   services:
-    - dind
+    - docker:dind
   script:
     - sbt docker:publish
 
