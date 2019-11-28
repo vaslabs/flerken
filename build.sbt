@@ -82,7 +82,7 @@ lazy val dockerCommonSettings = Seq(
   dockerBaseImage := "openjdk:8-alpine",
   dockerExposedPorts := Seq(8080, 8558),
   maintainer := "vaslabsco@gmail.com",
-  dockerUsername := sys.env.get("CI_PROJECT_NAMESPACE") orElse Some("vaslabs"),
+  dockerUsername := sys.env.get("CI_PROJECT_PATH") orElse Some("vaslabs"),
   dockerRepository := sys.env.get("CI_REGISTRY")
 )
 
