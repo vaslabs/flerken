@@ -11,9 +11,11 @@ spec:
     - port: 8080
       protocol: TCP
       targetPort: 8080
+      name: api
     - port: 8558
       protocol: TCP
       targetPort: 8558
+      name: management
 ---
 apiVersion: extensions/v1beta1
 kind: Ingress

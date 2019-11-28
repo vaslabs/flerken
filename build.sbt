@@ -97,7 +97,8 @@ lazy val deploymentSettings = Seq(
   envs in kube := Map(
     EnvName("AKKA_CLUSTER_BOOTSTRAP_SERVICE_NAME") -> EnvFieldValue("metadata.labels['app']"),
     EnvName("FLERKEN_HOSTNAME") -> EnvFieldValue("status.podIP"),
-    EnvName("FLERKEN_NAMESPACE") -> EnvFieldValue("metadata.namespace")
+    EnvName("FLERKEN_NAMESPACE") -> EnvFieldValue("metadata.namespace"),
+    EnvName("DISCOVERY_METHOD") -> EnvRawValue("kubernetes-api")
   ),
   resourceLimits := Resource(Cpu(2), Memory(2048 + 256))
 )
