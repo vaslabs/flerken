@@ -12,7 +12,7 @@ build:
     - sbt test
 
 publish:
-  stage: build
+  stage: publish
   before_script:
     - curl -sSL https://get.docker.com/ | sh
     - docker login -u gitlab-ci-token -p $CI_JOB_TOKEN $CI_REGISTRY
