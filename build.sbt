@@ -1,5 +1,9 @@
 import Dependencies.Modules._
-import sbtregressionsuite.RegressionSuiteKeys._
+import sbtregressionsuite.RegressionSuiteKeys
+import sbtregressionsuite.RegressionSuiteKeys.regression
+import kubeyml.deployment._
+import kubeyml.deployment.api._
+import kubeyml.deployment.plugin.Keys._
 
 name := "reactive-storage"
 
@@ -19,6 +23,8 @@ lazy val workScheduler = (project in file("scheduler")).settings(
 ).settings(compilerSettings)
   .enablePlugins(dockerPlugins: _*)
   .settings(noPublishSettings).settings(dockerCommonSettings)
+  .enablePlugins(KubeDeploymentPlugin)
+  .settings(deploymentSettings)
 
 lazy val schedulerIntegrationTests = (project in file("scheduler-integration-tests"))
   .settings(
@@ -29,10 +35,10 @@ lazy val schedulerIntegrationTests = (project in file("scheduler-integration-tes
   .enablePlugins(RegressionSuitePlugin)
   .settings(
     Seq(
-      dockerImage in regression := "vaslabs/flerken-regression",
-      newVersion in regression := version.value,
-      testCommand in regression := Seq("sbt" ,"schedulerIntegrationTests/test"),
-      dockerNetwork in regression := Some("sandbox_scheduler")
+      RegressionSuiteKeys.dockerImage in regression := "vaslabs/flerken-regression",
+      RegressionSuiteKeys.newVersion in regression := version.value,
+      RegressionSuiteKeys.testCommand in regression := Seq("sbt" ,"schedulerIntegrationTests/test"),
+      RegressionSuiteKeys.dockerNetwork in regression := Some("sandbox_scheduler")
     )
   )
 
@@ -74,9 +80,19 @@ lazy val dockerCommonSettings = Seq(
   version in Docker := version.value,
   maintainer in Docker := "Vasilis Nicolaou",
   dockerBaseImage := "openjdk:8-alpine",
-  dockerExposedPorts := Seq(8080),
+  dockerExposedPorts := Seq(8080, 8558),
   maintainer := "vaslabsco@gmail.com",
   dockerUsername := Some("vaslabs"),
 )
 
 lazy val dockerPlugins = Seq(DockerPlugin, AshScriptPlugin, JavaAppPackaging, UniversalPlugin)
+
+lazy val deploymentSettings = Seq(
+  namespace in kube := "flerken",
+  application in kube := "work-scheduler",
+  envs in kube := Map(
+    EnvName("AKKA_CLUSTER_BOOTSTRAP_SERVICE_NAME") -> EnvFieldValue("metadata.labels['app']"),
+    EnvName("FLERKEN_HOSTNAME") -> EnvFieldValue("status.podIP"),
+    EnvName("FLERKEN_NAMESPACE") -> EnvFieldValue("metadata.namespace")
+  )
+)

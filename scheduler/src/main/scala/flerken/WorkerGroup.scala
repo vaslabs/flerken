@@ -24,7 +24,8 @@ object WorkerGroup {
   def shardRegion(
                    workerGroupConfig: Config,
                    sharding: ClusterSharding): ActorRef[Protocol] = sharding.init(
-    Entity(TypeKey, entity => PendingWorkStorage.behavior(toStorageConfig(workerGroupConfig, entity.entityId))).withMessageExtractor[Protocol](
+    Entity(TypeKey)(entity => PendingWorkStorage.behavior(toStorageConfig(workerGroupConfig, entity.entityId)))
+      .withMessageExtractor[Protocol](
       new ShardingMessageExtractor[Protocol, PendingWorkStorage.Protocol]  {
         override def entityId(message: Protocol): String =
           message.workerId.id

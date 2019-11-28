@@ -12,14 +12,14 @@ object Dependencies {
       val scalacheck = "1.14.0"
     }
     object Akka {
-      val management = "1.0.1"
+      val management = "1.0.5"
 
-      val http = "10.1.9"
+      val http = "10.1.10"
       val circeHttp = "1.25.2"
-      val main = "2.6.0-M5"
+      val main = "2.6.0"
     }
 
-    val twitterChill = "0.9.3"
+    val twitterChill = "0.9.4"
 
     object Circe {
       val core = "0.11.1"
@@ -49,7 +49,7 @@ object Dependencies {
         "com.softwaremill.tapir" %% "tapir-core",
         "com.softwaremill.tapir" %% "tapir-akka-http-server",
         "com.softwaremill.tapir" %% "tapir-json-circe",
-        "com.softwaremill.tapir" %% "tapir-sttp-client",
+        "com.softwaremill.tapir" %% "tapir-sttp-client"
       ).map(_ % Versions.Tapir.core)
 
       val openApi = Seq(
@@ -81,6 +81,8 @@ object Dependencies {
         "com.lightbend.akka.management" %% "akka-management-cluster-http" % Versions.Akka.management,
         "com.lightbend.akka.management" %% "akka-management-cluster-bootstrap" % Versions.Akka.management
       )
+      val kubernetesDiscovery = "com.lightbend.akka.discovery" %% "akka-discovery-kubernetes-api" % Versions.Akka.management
+
       object twitterChill {
         val chill = "com.twitter" %% "chill" % Versions.twitterChill
         val chillAkka = "com.twitter" %% "chill-akka" % Versions.twitterChill
@@ -103,7 +105,7 @@ object Dependencies {
       val dependencies =
         Akka.actors ++ Akka.sharding ++ Akka.http ++ Tapir.akka ++ Tapir.openApi ++
         Circe.all ++ Seq(Cats.effect, Testing.scalatest % Test, Testing.scalacheck % Test) ++
-        Akka.clusterEssentials ++ Akka.twitterChill.needed
+        Akka.clusterEssentials ++ Akka.twitterChill.needed ++ Seq(Akka.kubernetesDiscovery)
     }
 
     object SchedulerIntegrationTests {
