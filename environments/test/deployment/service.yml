@@ -31,11 +31,11 @@ spec:
       http:
         paths:
           - backend:
-              serviceName: work-scheduler
+              serviceName: work-scheduler-test
               servicePort: 8080
             path: /*
           - backend:
-              serviceName: work-scheduler
+              serviceName: work-scheduler-test
               servicePort: 8558
             path: /cluster
 ---
