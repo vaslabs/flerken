@@ -7,10 +7,12 @@ stages:
 
 
 build:
+  stage: build
   script:
     - sbt test
 
 publish:
+  stage: build
   before_script:
     - curl -sSL https://get.docker.com/ | sh
     - docker login -u gitlab-ci-token -p $CI_JOB_TOKEN $CI_REGISTRY
@@ -20,6 +22,7 @@ publish:
     - sbt docker:publish
 
 deploy:
+  stage: deploy
   when: manual
   script:
     - echo Not setup
