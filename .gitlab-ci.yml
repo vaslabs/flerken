@@ -25,6 +25,10 @@ publish-test:
   stage: publish
   script:
     - sbt kubeyml:gen
+  artifacts:
+    untracked: true
+    paths:
+      - scheduler/target/kubeyml/deployment.yml
 
 deploy-test:
   stage: deploy
@@ -36,6 +40,8 @@ deploy-test:
     - kubectl apply -f environments/test/deployment/service.yml
     - sleep 10
     - kubectl describe -n flerken pod work-scheduler-test
+  dependencies:
+    - publish-test
 
 
 
