@@ -97,3 +97,4 @@ lazy val deploymentSettings = Seq(
     EnvName("FLERKEN_NAMESPACE") -> EnvFieldValue("metadata.namespace")
   )
 )
+
