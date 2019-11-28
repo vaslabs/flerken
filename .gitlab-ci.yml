@@ -36,7 +36,7 @@ deploy-test:
   image: $CI_DEPLOYMENT_IMAGE
   script:
     - kubectl apply -f environments/test/deployment/roles.yml
-    - kubectl apply -f scheduler/target/deployment.yml
+    - kubectl apply -f scheduler/target/kubeyml/deployment.yml
     - kubectl apply -f environments/test/deployment/service.yml
     - sleep 10
     - kubectl describe -n flerken pod work-scheduler-test
