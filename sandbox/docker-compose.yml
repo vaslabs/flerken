@@ -10,6 +10,9 @@ services:
       - ./scheduler-node-a/config:/opt/docker/conf:z
     networks:
       - scheduler
+    environment:
+      - FLERKEN_SERVICENAME=flerken-work-scheduler
+      - FLERKEN_HOSTNAME=scheduler-node-a
   scheduler-node-b:
     image: vaslabs/workscheduler:0.1.0-SNAPSHOT
     container_name: scheduler-node-b
@@ -20,6 +23,9 @@ services:
       - ./scheduler-node-b/config:/opt/docker/conf:z
     networks:
       - scheduler
+    environment:
+      - FLERKEN_SERVICENAME=flerken-work-scheduler
+      - FLERKEN_HOSTNAME=scheduler-node-b
 
 
 networks:

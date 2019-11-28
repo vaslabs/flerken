@@ -3,30 +3,31 @@ import sbt._
 object Dependencies {
 
   object Versions {
-    val catsEffect = "1.3.1"
+    val catsEffect = "2.0.0"
 
     object Testing {
       val scalacheckShapeless = "1.2.3"
 
-      val scalatest = "3.0.5"
+      val scalatest = "3.0.8"
       val scalacheck = "1.14.0"
     }
     object Akka {
       val management = "1.0.5"
 
       val http = "10.1.10"
-      val circeHttp = "1.25.2"
+      val circeHttp = "1.29.1"
       val main = "2.6.0"
+
     }
 
     val twitterChill = "0.9.4"
 
     object Circe {
-      val core = "0.11.1"
+      val core = "0.12.2"
     }
 
     object Tapir {
-      val core = "0.11.0"
+      val core = "0.12.4"
     }
 
   }
@@ -46,16 +47,16 @@ object Dependencies {
 
     object Tapir {
       val akka = Seq(
-        "com.softwaremill.tapir" %% "tapir-core",
-        "com.softwaremill.tapir" %% "tapir-akka-http-server",
-        "com.softwaremill.tapir" %% "tapir-json-circe",
-        "com.softwaremill.tapir" %% "tapir-sttp-client"
+        "com.softwaremill.sttp.tapir" %% "tapir-core",
+        "com.softwaremill.sttp.tapir" %% "tapir-akka-http-server",
+        "com.softwaremill.sttp.tapir" %% "tapir-json-circe",
+        "com.softwaremill.sttp.tapir" %% "tapir-sttp-client"
       ).map(_ % Versions.Tapir.core)
 
       val openApi = Seq(
-        "com.softwaremill.tapir" %% "tapir-openapi-docs",
-        "com.softwaremill.tapir" %% "tapir-openapi-circe-yaml",
-        "com.softwaremill.tapir" %% "tapir-swagger-ui-akka-http"
+        "com.softwaremill.sttp.tapir" %% "tapir-openapi-docs",
+        "com.softwaremill.sttp.tapir" %% "tapir-openapi-circe-yaml",
+        "com.softwaremill.sttp.tapir" %% "tapir-swagger-ui-akka-http"
       ).map(_ % Versions.Tapir.core)
 
     }
@@ -81,6 +82,11 @@ object Dependencies {
         "com.lightbend.akka.management" %% "akka-management-cluster-http" % Versions.Akka.management,
         "com.lightbend.akka.management" %% "akka-management-cluster-bootstrap" % Versions.Akka.management
       )
+      val logging = Seq(
+        "com.typesafe.akka" %% "akka-slf4j" % Versions.Akka.main,
+        "ch.qos.logback" % "logback-classic" % "1.2.3"
+      )
+
       val kubernetesDiscovery = "com.lightbend.akka.discovery" %% "akka-discovery-kubernetes-api" % Versions.Akka.management
 
       object twitterChill {
@@ -103,7 +109,7 @@ object Dependencies {
     import Libraries._
     object Scheduler {
       val dependencies =
-        Akka.actors ++ Akka.sharding ++ Akka.http ++ Tapir.akka ++ Tapir.openApi ++
+        Akka.actors ++ Akka.sharding ++ Akka.http ++ Tapir.akka ++ Tapir.openApi ++ Akka.logging ++
         Circe.all ++ Seq(Cats.effect, Testing.scalatest % Test, Testing.scalacheck % Test) ++
         Akka.clusterEssentials ++ Akka.twitterChill.needed ++ Seq(Akka.kubernetesDiscovery)
     }

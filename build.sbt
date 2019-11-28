@@ -9,7 +9,7 @@ name := "reactive-storage"
 
 version := "0.1"
 
-scalaVersion := "2.12.9"
+scalaVersion := "2.13.1"
 
 lazy val flerken =
   (project in file("."))

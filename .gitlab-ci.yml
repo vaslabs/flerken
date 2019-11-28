@@ -1,0 +1,22 @@
+image: hseeberger/scala-sbt:8u222_1.3.4_2.13.1
+
+before_script:
+  - curl -sSL https://get.docker.com/ | sh
+  - docker login -u gitlab-ci-token -p $CI_JOB_TOKEN $CI_REGISTRY
+
+services:
+  - dind
+
+stages:
+  - build
+  - publish
+  - deploy
+
+
+build:
+  script:
+    - sbt test
+
+publish:
+  script:
+    - sbt docker:publishLocal
