@@ -89,14 +89,16 @@ lazy val dockerCommonSettings = Seq(
 )
 
 lazy val dockerPlugins = Seq(DockerPlugin, AshScriptPlugin, JavaAppPackaging, UniversalPlugin)
+lazy val deploymentName = sys.env.getOrElse("DEPLOYMENT_NAME", "work-scheduler-test")
 
 lazy val deploymentSettings = Seq(
   namespace in kube := "flerken",
-  application in kube := "work-scheduler",
+  application in kube := deploymentName,
   envs in kube := Map(
     EnvName("AKKA_CLUSTER_BOOTSTRAP_SERVICE_NAME") -> EnvFieldValue("metadata.labels['app']"),
     EnvName("FLERKEN_HOSTNAME") -> EnvFieldValue("status.podIP"),
     EnvName("FLERKEN_NAMESPACE") -> EnvFieldValue("metadata.namespace")
-  )
+  ),
+  resourceLimits := Resource(Cpu(2), Memory(2048 + 256))
 )
 

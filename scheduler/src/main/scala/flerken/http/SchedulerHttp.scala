@@ -13,6 +13,8 @@ import sttp.tapir.docs.openapi._
 import sttp.tapir.openapi.circe.yaml._
 import sttp.tapir.swagger.akkahttp.SwaggerAkka
 
+import scala.concurrent.Future
+
 trait SchedulerHttp { schedulerApi: SchedulerApi =>
   import sttp.tapir.server.akkahttp._
 
@@ -30,6 +32,8 @@ trait SchedulerHttp { schedulerApi: SchedulerApi =>
     } ~ SchedulerEndpoints.acceptResultEndpoint.toRoute {
       storeWorkResult =>
         schedulerApi.storeWorkResult(storeWorkResult)
+    } ~ SchedulerEndpoints.acceptResultEndpoint.toRoute {
+      _ => Future.successful(Right(()))
     }
 
   val docsRoute = new SwaggerAkka(
@@ -110,6 +114,9 @@ object SchedulerEndpoints {
     )
     .out(statusCode(StatusCode.Accepted))
 
-  val all = Seq(fetchWorkEndpoint, postWorkEndpoint, workResultEndpoint, acceptResultEndpoint)
+  val healthEndpoint = endpoint.get.in("health").out(statusCode(StatusCode.Ok))
+    .errorOut(statusCode(StatusCode.ServiceUnavailable))
+
+  val all = Seq(fetchWorkEndpoint, postWorkEndpoint, workResultEndpoint, acceptResultEndpoint, healthEndpoint)
 
 }
