@@ -83,7 +83,9 @@ lazy val dockerCommonSettings = Seq(
   dockerExposedPorts := Seq(8080, 8558),
   maintainer := "vaslabsco@gmail.com",
   dockerUsername := sys.env.get("CI_PROJECT_PATH") orElse Some("vaslabs"),
-  dockerRepository := sys.env.get("CI_REGISTRY")
+  dockerRepository := sys.env.get("CI_REGISTRY"),
+  dynverSeparator in ThisBuild := "-",
+  dynverVTagPrefix in ThisBuild := false
 )
 
 lazy val dockerPlugins = Seq(DockerPlugin, AshScriptPlugin, JavaAppPackaging, UniversalPlugin)
