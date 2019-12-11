@@ -28,8 +28,10 @@ class SchedulerHttpSpec extends WordSpec with ScalatestRouteTest with AkkaBase w
     implicit val timeout: Timeout = Timeout(3 seconds)
 
     val workGroup = testKit.createTestProbe[WorkerGroup.Protocol]
-    val workStorage = testKit.spawn(PendingWorkStorage.behavior(StorageConfig(1 minute, 10 seconds, 20, workerId)))
     val resultStorage = testKit.spawn(ResultStorage.behavior(Map.empty))
+    val workStorage = testKit.spawn(
+      PendingWorkStorage.behavior(StorageConfig(1 minute, 10 seconds, 20, workerId), resultStorage)
+    )
 
     val workIdRef = new AtomicReference[WorkId]()
 
@@ -60,15 +62,17 @@ class SchedulerHttpSpec extends WordSpec with ScalatestRouteTest with AkkaBase w
 
     "query work status" in {
       Get(s"/result/${workIdRef.get().value}") ~> schedulerHttp.route ~> check {
-        responseAs[WorkResult] shouldBe WorkResult.pending(workIdRef.get())
+        responseAs[WorkResult] shouldBe PendingWorkResult(workIdRef.get(), Pending)
       }
     }
 
     "complete work" in {
+
       Put("/work", StoreWorkResult(workIdRef.get(), Json.obj("outcome" -> Json.fromInt(4)))) ~> schedulerHttp.route ~> check {
         response.status shouldBe StatusCodes.Accepted
       }
     }
+
 
     "report result" in {
       Get(s"/result/${workIdRef.get().value}") ~> schedulerHttp.route ~> check {

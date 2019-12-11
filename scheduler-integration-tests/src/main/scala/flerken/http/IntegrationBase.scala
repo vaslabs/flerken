@@ -1,10 +1,12 @@
 package flerken.http
 
-import com.softwaremill.sttp.{Uri, _}
+import cats.Id
+import sttp.client._
 import org.scalacheck.Arbitrary
 import org.scalatest.{Assertion, Matchers}
-import tapir.Endpoint
-import tapir.client.sttp._
+import sttp.model.Uri
+import sttp.tapir.Endpoint
+import sttp.tapir.client.sttp._
 
 object IntegrationBase  extends Matchers with TapirSttpClient{
 
@@ -30,16 +32,16 @@ object IntegrationBase  extends Matchers with TapirSttpClient{
 
   def chain[I, O, E]( serverEndpoint: Endpoint[I, E, O, Nothing])(baseUri: Uri)(
     implicit arbitraryInput: Arbitrary[I]): (I, Either[E, O]) = {
-    val client = serverEndpoint.toSttpRequest(
+    val client = serverEndpoint.toSttpRequestUnsafe(
       baseUri
     )
 
-    implicit val backend: SttpBackend[Id, Nothing] = HttpURLConnectionBackend()
+    implicit val backend = HttpURLConnectionBackend()
 
     val requestInput = arbitraryInput.arbitrary.sample.get
 
     val request: Request[Either[E, O], Nothing] = client(requestInput)
 
-    requestInput -> request.send[Id]().unsafeBody
+    requestInput -> request.send[Id]().body
   }
 }

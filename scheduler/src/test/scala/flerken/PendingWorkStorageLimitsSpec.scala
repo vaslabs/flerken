@@ -13,9 +13,10 @@ class PendingWorkStorageLimitsSpec extends WordSpec with Matchers with AkkaBase 
   "work storage" must {
     val pendingWorkStorageEventListener = testKit.createTestProbe[Event]()
     testKit.system.eventStream ! Subscribe(pendingWorkStorageEventListener.ref)
+    val resultStorage = testKit.createTestProbe[ResultStorage.Protocol]()
     val storageConfig = StorageConfig(5 seconds, 1 second, 5, WorkerId("PendingWorkStorageLimitsSpec"))
     val storage = testKit.spawn(
-      PendingWorkStorage.behavior(storageConfig),
+      PendingWorkStorage.behavior(storageConfig, resultStorage.ref),
       "PendingWorkStorage"
     )
     "reject work when it reaches high watermark" in {
