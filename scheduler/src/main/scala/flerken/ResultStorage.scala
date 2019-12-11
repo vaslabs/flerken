@@ -2,10 +2,29 @@ package flerken
 
 import akka.actor.typed.scaladsl.Behaviors
 import akka.actor.typed.{ActorRef, Behavior}
+import akka.cluster.sharding.typed.ShardingMessageExtractor
+import akka.cluster.sharding.typed.scaladsl.{ClusterSharding, Entity, EntityTypeKey}
 import flerken.protocol.Protocol.{CompletedWorkResult, InternalWorkResult, UncompletedWorkResult, WorkId, WorkResult}
 import io.circe.Json
 
 object ResultStorage {
+
+  final val TypeKey = EntityTypeKey[Protocol]("ResultStorage")
+  final val Distribution = 1000
+
+  def shardRegion(clusterSharding: ClusterSharding): ActorRef[Protocol] = clusterSharding.init(
+    Entity(TypeKey)(_ => behavior(Map.empty)).withMessageExtractor {
+      new ShardingMessageExtractor[Protocol, Protocol] {
+        override def entityId(message: Protocol): String =
+          message.workId.toString
+
+        override def shardId(entityId: String): String =
+          Math.abs(entityId.hashCode() % Distribution).toString
+
+        override def unwrapMessage(message: Protocol): Protocol = message
+      }
+    }
+  )
 
 
   def behavior(storage: Map[WorkId, InternalWorkResult]): Behavior[Protocol] =
@@ -35,8 +54,9 @@ object ResultStorage {
     }
 
 
-  sealed trait Protocol
-
+  sealed trait Protocol {
+    def workId: WorkId
+  }
 
   case class FetchResult(workId: WorkId, ref: ActorRef[Option[WorkResult]]) extends Protocol
   case class StoreResult(workId: WorkId, result: Json, ref: ActorRef[ResultAck]) extends Protocol

@@ -29,7 +29,7 @@ object Bootstrap extends IOApp{
         ClusterBootstrap(system).start()
         val sharding = ClusterSharding(ctx.system)
 
-        val resultStorage = ctx.spawn(ResultStorage.behavior(Map.empty), "ResultStorage")
+        val resultStorage = ResultStorage.shardRegion(sharding)
 
         val workerGroup = WorkerGroup.shardRegion(WorkerGroup.Config(1 minute, 20 seconds, 100), sharding, resultStorage)
 
