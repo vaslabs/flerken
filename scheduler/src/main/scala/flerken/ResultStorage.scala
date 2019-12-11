@@ -14,7 +14,6 @@ object ResultStorage {
         replyTo ! storage.get(workId).map(_.toExternal)
         Behaviors.same
       case (ctx, StoreResult(workId, result, replyTo)) =>
-        ctx.log.info(s"Received store result $result, from $replyTo")
         storage.get(workId) match {
           case Some(CompletedWorkResult(_, _, _)) =>
             replyTo ! DuplicateResult
