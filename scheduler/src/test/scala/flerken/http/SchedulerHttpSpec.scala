@@ -5,6 +5,7 @@ import java.util.concurrent.atomic.AtomicReference
 import akka.http.scaladsl.model.StatusCodes
 import akka.http.scaladsl.testkit.ScalatestRouteTest
 import akka.util.Timeout
+import cats.effect.IO
 import de.heikoseeberger.akkahttpcirce.FailFastCirceSupport._
 import flerken.PendingWorkStorage.{AddWork, FetchWork}
 import flerken.WorkerGroup.StoreWorkFor
@@ -15,7 +16,7 @@ import io.circe.Json
 import org.scalacheck.Gen
 import org.scalatest.{Matchers, WordSpec}
 
-import scala.concurrent.Future
+import scala.concurrent.{ExecutionContext, Future}
 import scala.concurrent.duration._
 
 class SchedulerHttpSpec extends WordSpec with ScalatestRouteTest with AkkaBase with Matchers{
@@ -73,6 +74,16 @@ class SchedulerHttpSpec extends WordSpec with ScalatestRouteTest with AkkaBase w
       }
     }
 
+    "give empty work after result expiration" in {
+      IO.sleep(11 seconds)(IO.timer(ExecutionContext.global)).unsafeRunSync()
+      Future {
+        val query = workGroup.expectMessageType[WorkerGroup.AssignWorkTo]
+        workStorage ! FetchWork(query.replyTo)
+      }
+      Get(s"/work/${workerId.id}") ~> schedulerHttp.route ~> check {
+        response.status shouldBe StatusCodes.NoContent
+      }
+    }
 
     "report result" in {
       Get(s"/result/${workIdRef.get().value}") ~> schedulerHttp.route ~> check {

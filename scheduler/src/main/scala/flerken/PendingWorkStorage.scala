@@ -8,6 +8,7 @@ import akka.actor.typed.{ActorRef, Behavior}
 import cats.data.NonEmptyList
 import flerken.PendingWorkStorage.Retry
 import AkkaExtras._
+import flerken.AllocatedWorkStorage.RemoveWork
 import flerken.ResultStorage.WaitForResult
 import flerken.protocol.Protocol.{WorkId, WorkerId}
 object PendingWorkStorage {
@@ -96,6 +97,14 @@ object PendingWorkStorage {
       case (ctx, Retry(id, work)) =>
         ctx.system.eventStream ! Publish(WorkRetry(id))
         behaviorWithWork(pendingWork :+ PendingWork(id, work), allocatedWorkStorage, storageConfig, resultStorage)
+      case (_, CompleteWork(id)) =>
+         val remaining = pendingWork.filterNot(_.id == id)
+         allocatedWorkStorage ! RemoveWork(id)
+         NonEmptyList.fromList(remaining).fold(
+           handleNoWorkBehavior(allocatedWorkStorage, storageConfig, resultStorage)
+         )(
+           remainingWork => behaviorWithWork(remainingWork, allocatedWorkStorage, storageConfig, resultStorage)
+         )
     }
 
 
