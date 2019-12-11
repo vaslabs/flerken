@@ -76,6 +76,7 @@ object PendingWorkStorage {
       case (ctx, AddWork(work, replyTo)) =>
         val identifier = WorkId(UUID.randomUUID())
         replyTo ! WorkReceived(identifier)
+        resultStorage ! WaitForResult(identifier, ctx.self)
 
         ctx.scheduleOnce(
           storageConfig.staleTimeout,
