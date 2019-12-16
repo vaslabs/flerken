@@ -2,6 +2,8 @@ package flerken.protocol
 
 import java.util.UUID
 
+import akka.actor.typed.ActorRef
+import flerken.PendingWorkStorage
 import io.circe.Json
 
 object Protocol {
@@ -22,6 +24,10 @@ object Protocol {
   case object Completed extends WorkStatus
 
 
+  sealed trait InternalWorkResult {
+    def toExternal: WorkResult
+  }
+
   sealed trait WorkResult {
     def workId: WorkId
     def status: WorkStatus
@@ -30,11 +36,17 @@ object Protocol {
   object WorkResult {
     def completed(id: WorkId, result: Json) = CompletedWorkResult(id, Completed, result)
 
-    def pending(workId: WorkId) = UncompletedWorkResult(workId, Pending)
+    def pending(workId: WorkId, replyTo: ActorRef[PendingWorkStorage.CompleteWork]) = UncompletedWorkResult(workId, Pending, replyTo)
   }
 
-  case class UncompletedWorkResult (workId: WorkId, status: WorkStatus) extends WorkResult
-  case class CompletedWorkResult(workId: WorkId, status: WorkStatus, result: Json) extends WorkResult
+  case class UncompletedWorkResult (workId: WorkId, status: WorkStatus, replyTo: ActorRef[PendingWorkStorage.CompleteWork]) extends InternalWorkResult {
+    override def toExternal: WorkResult = PendingWorkResult(workId, status)
+  }
+
+  case class CompletedWorkResult(workId: WorkId, status: WorkStatus, result: Json) extends WorkResult with InternalWorkResult {
+    override def toExternal: WorkResult = this
+  }
+  case class PendingWorkResult(workId: WorkId, status: WorkStatus) extends WorkResult
 
   case class ResultRejected(reason: String)
 }

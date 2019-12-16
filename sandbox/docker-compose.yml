@@ -2,7 +2,7 @@ version: '3'
 services:
   scheduler-node-a:
     container_name: scheduler-node-a
-    image: vaslabs/workscheduler:0.1.0-SNAPSHOT
+    image: vaslabs/workscheduler:1.0-rc1-9-7e83156d-20191211-1435
     ports:
     - "8080:8080"
     - "8558:8558"
@@ -10,8 +10,11 @@ services:
       - ./scheduler-node-a/config:/opt/docker/conf:z
     networks:
       - scheduler
+    environment:
+      - FLERKEN_SERVICENAME=flerken-work-scheduler
+      - FLERKEN_HOSTNAME=scheduler-node-a
   scheduler-node-b:
-    image: vaslabs/workscheduler:0.1.0-SNAPSHOT
+    image: vaslabs/workscheduler:1.0-rc1-9-7e83156d-20191211-1435
     container_name: scheduler-node-b
     ports:
       - "8081:8080"
@@ -20,6 +23,9 @@ services:
       - ./scheduler-node-b/config:/opt/docker/conf:z
     networks:
       - scheduler
+    environment:
+      - FLERKEN_SERVICENAME=flerken-work-scheduler
+      - FLERKEN_HOSTNAME=scheduler-node-b
 
 
 networks:

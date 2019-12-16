@@ -16,10 +16,11 @@ class PendingWorkStorageSpec extends WordSpec with Matchers with AkkaBase {
     val storageConfig = StorageConfig(5 seconds, 2 seconds, 100, WorkerId("PendingWorkStorageSpec"))
     val sender = testKit.createTestProbe[Work]()
     val pendingWorkEventListener = testKit.createTestProbe[Event]()
+    val resultStorage = testKit.createTestProbe[ResultStorage.Protocol]()
     testKit.system.eventStream ! Subscribe(pendingWorkEventListener.ref)
     val firstWorkIdentifier = new AtomicReference[WorkId]()
 
-    val storage = testKit.spawn(PendingWorkStorage.behavior(storageConfig), "WorkStorage")
+    val storage = testKit.spawn(PendingWorkStorage.behavior(storageConfig, resultStorage.ref), "WorkStorage")
     "give no work if there is none" in {
 
       storage ! FetchWork(sender.ref)

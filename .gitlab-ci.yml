@@ -1,0 +1,51 @@
+image: hseeberger/scala-sbt:8u222_1.3.4_2.13.1
+
+stages:
+  - build
+  - publish
+  - deploy
+
+
+build:
+  stage: build
+  script:
+    - sbt test
+
+publish:
+  stage: publish
+  before_script:
+    - curl -sSL https://get.docker.com/ | sh
+    - docker login -u gitlab-ci-token -p $CI_JOB_TOKEN $CI_REGISTRY
+  services:
+    - docker:dind
+  script:
+    - sbt docker:publish
+
+publish-test:
+  stage: publish
+  script:
+    - sbt kubeyml:gen
+  artifacts:
+    untracked: true
+    paths:
+      - scheduler/target/kubeyml/deployment.yml
+      - scheduler/target/kubeyml/service.yml
+      - scheduler/target/kubeyml/ingress.yml
+
+deploy-test:
+  stage: deploy
+  when: manual
+  image: $CI_DEPLOYMENT_IMAGE
+  script:
+    - kubectl apply -f environments/test/deployment/roles.yml
+    - kubectl delete -f scheduler/target/kubeyml/deployment.yml
+    - kubectl apply -f scheduler/target/kubeyml/deployment.yml
+    - kubectl apply -f scheduler/target/kubeyml/service.yml
+    - kubectl apply -f scheduler/target/kubeyml/ingress.yml
+    - sleep 10
+    - kubectl describe -n flerken pod work-scheduler-test
+  dependencies:
+    - publish-test
+
+
+

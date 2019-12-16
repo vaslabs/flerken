@@ -4,7 +4,7 @@ import akka.actor.typed.scaladsl.AskPattern._
 import akka.actor.typed.{ActorRef, Scheduler}
 import akka.util.Timeout
 import flerken.PendingWorkStorage.{WorkRejected, _}
-import flerken.ResultStorage.ResultAccepted
+import flerken.ResultStorage.{NotReady, ResultAccepted}
 import flerken.protocol.Protocol
 import flerken.protocol.Protocol.WorkResult
 import io.circe.Json
@@ -33,7 +33,6 @@ class ActorBasedSchedulerApi(
   override def storeWork(storeWork: Protocol.StoreWork): Future[Either[Unit, Protocol.WorkId]] =
     (workStorage ?[WorkAck] (ref => WorkerGroup.StoreWorkFor(storeWork.workerId, storeWork.work, ref))).map {
       case WorkReceived(workId) =>
-        resultStorage ! ResultStorage.WaitForResult(workId)
         Right(workId)
       case WorkRejected => Left(())
     }
@@ -53,5 +52,9 @@ class ActorBasedSchedulerApi(
         Right(())
       case ResultStorage.DuplicateResult =>
         Left(Protocol.ResultRejected(s"Duplicated result, rejecting most recent one for workId ${storeWorkResult.workId}"))
+      case NotReady =>
+        Left(Protocol.ResultRejected(
+          s"Result storage is not ready to receive this result, please retry fast on this occasion, workId: ${storeWorkResult.workId}")
+        )
    }
 }
