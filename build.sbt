@@ -108,8 +108,8 @@ lazy val deploymentSettings = Seq(
   ),
   livenessProbe in kube := HttpProbe(HttpGet("/alive", 8558, List.empty), 10 seconds, 3 seconds, 5 seconds, 3, 1),
   readinessProbe in kube := HttpProbe(HttpGet("/ready", 8558, List.empty), 10 seconds, 3 seconds, 5 seconds, 3, 1),
-  resourceRequests in kube := Resource(Cpu.fromCores(1), Memory(512)),
-  resourceLimits in kube := Resource(Cpu.fromCores(2), Memory(2048 + 256)),
+  resourceRequests in kube := Resource(Cpu(1), Memory(512)),
+  resourceLimits in kube := Resource(Cpu(2), Memory(2048 + 256)),
   ingressRules in kube := List(
     HttpRule(Host(hostName), List(
       IngressPath(ServiceMapping((application in kube).value, 8080), "/*"),
