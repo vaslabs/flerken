@@ -1,6 +1,6 @@
 package flerkent.integration
 
-import com.softwaremill.sttp.Uri
+import sttp.client._
 import flerken.http.IntegrationBase._
 import flerken.http.SchedulerEndpoints
 import flerken.protocol.Protocol._
@@ -13,7 +13,7 @@ class IntegrationTest extends WordSpec with Matchers{
 
   import DataGenerator._
 
-  val uri =  Uri.apply("http", "scheduler-node-a", 8080)
+  val uri =  uri"http://scheduler-node-a:8080"
 
   "scheduler" must {
 
