@@ -1,11 +1,20 @@
 import Dependencies.Modules._
-import sbtregressionsuite.RegressionSuiteKeys._
+import sbtregressionsuite.RegressionSuiteKeys
+import sbtregressionsuite.RegressionSuiteKeys.regression
+import kubeyml.deployment._
+import kubeyml.deployment.api._
+import kubeyml.deployment.plugin.Keys._
+import kubeyml.ingress.plugin.Keys._
+import kubeyml.ingress.{Host, HttpRule, ServiceMapping, Path => IngressPath}
+import kubeyml.ingress.api.Annotate
+
+import scala.concurrent.duration._
 
 name := "reactive-storage"
 
 version := "0.1"
 
-scalaVersion := "2.12.9"
+scalaVersion := "2.13.1"
 
 lazy val flerken =
   (project in file("."))
@@ -19,6 +28,8 @@ lazy val workScheduler = (project in file("scheduler")).settings(
 ).settings(compilerSettings)
   .enablePlugins(dockerPlugins: _*)
   .settings(noPublishSettings).settings(dockerCommonSettings)
+  .enablePlugins(KubeDeploymentPlugin, KubeServicePlugin, KubeIngressPlugin)
+  .settings(deploymentSettings)
 
 lazy val schedulerIntegrationTests = (project in file("scheduler-integration-tests"))
   .settings(
@@ -29,10 +40,10 @@ lazy val schedulerIntegrationTests = (project in file("scheduler-integration-tes
   .enablePlugins(RegressionSuitePlugin)
   .settings(
     Seq(
-      dockerImage in regression := "vaslabs/flerken-regression",
-      newVersion in regression := version.value,
-      testCommand in regression := Seq("sbt" ,"schedulerIntegrationTests/test"),
-      dockerNetwork in regression := Some("sandbox_scheduler")
+      RegressionSuiteKeys.dockerImage in regression := "vaslabs/flerken-regression",
+      RegressionSuiteKeys.newVersion in regression := version.value,
+      RegressionSuiteKeys.testCommand in regression := Seq("sbt" ,"schedulerIntegrationTests/test"),
+      RegressionSuiteKeys.dockerNetwork in regression := Some("sandbox_scheduler")
     )
   )
 
@@ -74,9 +85,39 @@ lazy val dockerCommonSettings = Seq(
   version in Docker := version.value,
   maintainer in Docker := "Vasilis Nicolaou",
   dockerBaseImage := "openjdk:8-alpine",
-  dockerExposedPorts := Seq(8080),
+  dockerExposedPorts := Seq(8080, 8558),
   maintainer := "vaslabsco@gmail.com",
-  dockerUsername := Some("vaslabs"),
+  dockerUsername := sys.env.get("CI_PROJECT_PATH") orElse Some("vaslabs"),
+  dockerRepository := sys.env.get("CI_REGISTRY"),
+  dynverSeparator in ThisBuild := "-",
+  dynverVTagPrefix in ThisBuild := false
 )
 
 lazy val dockerPlugins = Seq(DockerPlugin, AshScriptPlugin, JavaAppPackaging, UniversalPlugin)
+lazy val deploymentName = sys.env.getOrElse("DEPLOYMENT_NAME", "work-scheduler-test")
+lazy val hostName = sys.env.getOrElse("FLERKEN_HOSTNAME", "flerken.localhost")
+
+lazy val deploymentSettings = Seq(
+  namespace in kube := "flerken",
+  application in kube := deploymentName,
+  envs in kube := Map(
+    EnvName("AKKA_CLUSTER_BOOTSTRAP_SERVICE_NAME") -> EnvFieldValue("metadata.labels['app']"),
+    EnvName("FLERKEN_HOSTNAME") -> EnvFieldValue("status.podIP"),
+    EnvName("FLERKEN_NAMESPACE") -> EnvFieldValue("metadata.namespace"),
+    EnvName("DISCOVERY_METHOD") -> EnvRawValue("kubernetes-api")
+  ),
+  livenessProbe in kube := HttpProbe(HttpGet("/alive", 8558, List.empty), 10 seconds, 3 seconds, 5 seconds, 3, 1),
+  readinessProbe in kube := HttpProbe(HttpGet("/ready", 8558, List.empty), 10 seconds, 3 seconds, 5 seconds, 3, 1),
+  resourceRequests in kube := Resource(Cpu.fromCores(1), Memory(512)),
+  resourceLimits in kube := Resource(Cpu.fromCores(2), Memory(2048 + 256)),
+  ingressRules in kube := List(
+    HttpRule(Host(hostName), List(
+      IngressPath(ServiceMapping((application in kube).value, 8080), "/*"),
+      IngressPath(ServiceMapping((application in kube).value, 8558), "/cluster")
+    ))
+  ),
+  ingressAnnotations in kube := Map(
+    Annotate.nginxIngress(),
+    Annotate.nginxRewriteTarget("/")
+  )
+)

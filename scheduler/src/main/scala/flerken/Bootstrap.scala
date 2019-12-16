@@ -8,7 +8,7 @@ import akka.cluster.sharding.typed.scaladsl.ClusterSharding
 import akka.http.scaladsl.Http
 import akka.management.cluster.bootstrap.ClusterBootstrap
 import akka.management.scaladsl.AkkaManagement
-import akka.stream.ActorMaterializer
+import akka.stream.Materializer
 import akka.util.Timeout
 import cats.effect.{ExitCode, IO, IOApp, Resource}
 import cats.implicits._
@@ -21,7 +21,7 @@ object Bootstrap extends IOApp{
 
     implicit val timeout = Timeout(3 seconds)
     implicit val scheduler = ctx.system.scheduler
-    implicit val system = ctx.system.toUntyped
+    implicit val system = ctx.system.toClassic
     implicit val executionContext = ctx.executionContext
     val server = AkkaManagement(system).start().map {
       uri =>
@@ -29,14 +29,15 @@ object Bootstrap extends IOApp{
         ClusterBootstrap(system).start()
         val sharding = ClusterSharding(ctx.system)
 
-        val workerGroup = WorkerGroup.shardRegion(WorkerGroup.Config(1 minute, 20 seconds, 100), sharding)
-        val resultStorage = ctx.spawn(ResultStorage.behavior(Map.empty), "ResultStorage")
+        val resultStorage = ResultStorage.shardRegion(sharding)
+
+        val workerGroup = WorkerGroup.shardRegion(WorkerGroup.Config(1 minute, 20 seconds, 100), sharding, resultStorage)
 
         val api = new ActorBasedSchedulerApi(workerGroup, resultStorage) with SchedulerHttp
         api
     }.flatMap {
       api =>
-        implicit val actorMaterializer = ActorMaterializer()
+        implicit val materializer = Materializer(ctx)
 
         val server = IO.fromFuture(IO(Http().bindAndHandle(api.route ~ api.docsRoute, "0.0.0.0", 8080))).unsafeToFuture()
         server

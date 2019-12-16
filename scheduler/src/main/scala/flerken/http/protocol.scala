@@ -21,8 +21,8 @@ object json_support {
   implicit val workStatusDecoder: Decoder[WorkStatus] = deriveDecoder[WorkStatus]
   implicit val workStatusEncoder: Encoder[WorkStatus] = deriveEncoder[WorkStatus]
 
-  implicit val uncompletedWorkResultEncoder: Encoder[UncompletedWorkResult] = deriveEncoder[UncompletedWorkResult]
-  implicit val uncompletedWorkResultDecoder: Decoder[UncompletedWorkResult] = deriveDecoder[UncompletedWorkResult]
+  implicit val uncompletedWorkResultEncoder: Encoder[PendingWorkResult] = deriveEncoder
+  implicit val uncompletedWorkResultDecoder: Decoder[PendingWorkResult] = deriveDecoder
 
 
   implicit val workResultDecoder: Decoder[WorkResult] = Decoder.instance {
@@ -31,7 +31,7 @@ object json_support {
         status <- hCursor.downField("status").as[WorkStatus]
         workId <- hCursor.downField("workId").as[WorkId]
         result = status match {
-          case Pending => WorkResult.pending(workId)
+          case Pending => PendingWorkResult(workId, status)
           case Completed =>
             val payload = hCursor.downField("result").as[Json].getOrElse(Json.obj())
             WorkResult.completed(workId, payload)
@@ -40,7 +40,7 @@ object json_support {
   }
 
   implicit val workResultEncoder: Encoder[WorkResult] = Encoder.instance {
-    case uwr: UncompletedWorkResult => uncompletedWorkResultEncoder(uwr)
+    case uwr: PendingWorkResult => uncompletedWorkResultEncoder(uwr)
     case completedWorkResult: CompletedWorkResult => deriveEncoder[CompletedWorkResult].apply(completedWorkResult)
   }
 

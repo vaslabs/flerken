@@ -7,14 +7,16 @@ import akka.http.scaladsl.server.Directives._
 import flerken.SchedulerApi
 import flerken.protocol.Protocol._
 import io.circe.Json
-import tapir.Codec.PlainCodec
-import tapir.model.StatusCodes
-import tapir.docs.openapi._
-import tapir.openapi.circe.yaml._
-import tapir.swagger.akkahttp.SwaggerAkka
+import sttp.model.StatusCode
+import sttp.tapir.Codec.PlainCodec
+import sttp.tapir.docs.openapi._
+import sttp.tapir.openapi.circe.yaml._
+import sttp.tapir.swagger.akkahttp.SwaggerAkka
+
+import scala.concurrent.Future
 
 trait SchedulerHttp { schedulerApi: SchedulerApi =>
-  import tapir.server.akkahttp._
+  import sttp.tapir.server.akkahttp._
 
 
   val route =
@@ -30,6 +32,8 @@ trait SchedulerHttp { schedulerApi: SchedulerApi =>
     } ~ SchedulerEndpoints.acceptResultEndpoint.toRoute {
       storeWorkResult =>
         schedulerApi.storeWorkResult(storeWorkResult)
+    } ~ SchedulerEndpoints.acceptResultEndpoint.toRoute {
+      _ => Future.successful(Right(()))
     }
 
   val docsRoute = new SwaggerAkka(
@@ -41,8 +45,8 @@ trait SchedulerHttp { schedulerApi: SchedulerApi =>
 object SchedulerEndpoints {
   import io.circe.generic.auto._
   import json_support._
-  import tapir._
-  import tapir.json.circe._
+  import sttp.tapir._
+  import sttp.tapir.json.circe._
 
   implicit val workIDCodec: PlainCodec[WorkId] = Codec.uuidPlainCodec.map(WorkId)(_.value)
   implicit val workerIDCodec: PlainCodec[WorkerId] = Codec.stringPlainCodecUtf8.map(WorkerId)(_.id)
@@ -71,12 +75,12 @@ object SchedulerEndpoints {
       .name("Fetch work")
       .get
       .errorOut(
-        statusCode(StatusCodes.NotFound)
+        statusCode(StatusCode.NotFound)
       )
       .out(oneOf[Work](
-        statusMapping(StatusCodes.Ok, jsonBody[SomeWork].example(Examples.someWork)),
+        statusMapping(StatusCode.Ok, jsonBody[SomeWork].example(Examples.someWork)),
         statusMapping[NoWork.type](
-          StatusCodes.NoContent, plainBody[NoWork.type].example(NoWork)
+          StatusCode.NoContent, plainBody[NoWork.type].example(NoWork)
         )
       ))
 
@@ -85,8 +89,8 @@ object SchedulerEndpoints {
     .in(jsonBody[StoreWork].example(Examples.storeWork))
     .description("Submit work to be stored for a particular worker")
     .post
-    .errorOut(statusCode(StatusCodes.TooManyRequests))
-    .out(statusCode(StatusCodes.Created))
+    .errorOut(statusCode(StatusCode.TooManyRequests))
+    .out(statusCode(StatusCode.Created))
     .out(jsonBody[WorkId].example(Examples.workId))
 
 
@@ -95,8 +99,8 @@ object SchedulerEndpoints {
       .description("The id of a work that was submitted previously to view its status"))
     .get
     .description("Get the result of a previously submitted work")
-    .errorOut(statusCode(StatusCodes.NotFound))
-    .out(oneOf(statusMapping[WorkResult](StatusCodes.Ok, jsonBody[WorkResult].example(Examples.workResult))))
+    .errorOut(statusCode(StatusCode.NotFound))
+    .out(oneOf(statusMapping[WorkResult](StatusCode.Ok, jsonBody[WorkResult].example(Examples.workResult))))
 
   val acceptResultEndpoint: Endpoint[StoreWorkResult, ResultRejected, Unit, Nothing] =
     endpoint.put.in("work")
@@ -104,12 +108,15 @@ object SchedulerEndpoints {
     .in(jsonBody[StoreWorkResult].example(Examples.storeWorkResult))
     .errorOut(
       oneOf(
-        statusMapping(StatusCodes.NotFound, jsonBody[ResultRejected]),
-        statusMapping(StatusCodes.AlreadyReported, jsonBody[ResultRejected])
+        statusMapping(StatusCode.NotFound, jsonBody[ResultRejected]),
+        statusMapping(StatusCode.AlreadyReported, jsonBody[ResultRejected])
       )
     )
-    .out(statusCode(StatusCodes.Accepted))
+    .out(statusCode(StatusCode.Accepted))
 
-  val all = Seq(fetchWorkEndpoint, postWorkEndpoint, workResultEndpoint, acceptResultEndpoint)
+  val healthEndpoint = endpoint.get.in("health").out(statusCode(StatusCode.Ok))
+    .errorOut(statusCode(StatusCode.ServiceUnavailable))
+
+  val all = Seq(fetchWorkEndpoint, postWorkEndpoint, workResultEndpoint, acceptResultEndpoint, healthEndpoint)
 
 }
