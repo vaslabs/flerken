@@ -6,5 +6,5 @@ addSbtPlugin("net.virtual-void" % "sbt-dependency-graph" % "0.9.2")
 
 addSbtPlugin("org.vaslabs.tests" % "sbt-regression-suite" % "1.0")
 
-addSbtPlugin("org.vaslabs.kube" % "sbt-kubeyml" % "0.2.5")
+addSbtPlugin("org.vaslabs.kube" % "sbt-kubeyml" % "0.2.8")
 addSbtPlugin("com.dwijnand" % "sbt-dynver" % "4.0.0")

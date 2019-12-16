@@ -4,6 +4,10 @@ import sbtregressionsuite.RegressionSuiteKeys.regression
 import kubeyml.deployment._
 import kubeyml.deployment.api._
 import kubeyml.deployment.plugin.Keys._
+import kubeyml.ingress.plugin.Keys._
+import kubeyml.ingress.{Host, HttpRule, ServiceMapping, Path => IngressPath}
+import kubeyml.ingress.api.Annotate
+
 import scala.concurrent.duration._
 
 name := "reactive-storage"
@@ -24,7 +28,7 @@ lazy val workScheduler = (project in file("scheduler")).settings(
 ).settings(compilerSettings)
   .enablePlugins(dockerPlugins: _*)
   .settings(noPublishSettings).settings(dockerCommonSettings)
-  .enablePlugins(KubeDeploymentPlugin)
+  .enablePlugins(KubeDeploymentPlugin, KubeServicePlugin, KubeIngressPlugin)
   .settings(deploymentSettings)
 
 lazy val schedulerIntegrationTests = (project in file("scheduler-integration-tests"))
@@ -91,6 +95,7 @@ lazy val dockerCommonSettings = Seq(
 
 lazy val dockerPlugins = Seq(DockerPlugin, AshScriptPlugin, JavaAppPackaging, UniversalPlugin)
 lazy val deploymentName = sys.env.getOrElse("DEPLOYMENT_NAME", "work-scheduler-test")
+lazy val hostName = sys.env.getOrElse("FLERKEN_HOSTNAME", "flerken.localhost")
 
 lazy val deploymentSettings = Seq(
   namespace in kube := "flerken",
@@ -103,6 +108,16 @@ lazy val deploymentSettings = Seq(
   ),
   livenessProbe in kube := HttpProbe(HttpGet("/alive", 8558, List.empty), 10 seconds, 3 seconds, 5 seconds, 3, 1),
   readinessProbe in kube := HttpProbe(HttpGet("/ready", 8558, List.empty), 10 seconds, 3 seconds, 5 seconds, 3, 1),
-  resourceLimits := Resource(Cpu(2), Memory(2048 + 256))
+  resourceRequests in kube := Resource(Cpu(1), Memory(512)),
+  resourceLimits in kube := Resource(Cpu(2), Memory(2048 + 256)),
+  ingressRules in kube := List(
+    HttpRule(Host(hostName), List(
+      IngressPath(ServiceMapping((application in kube).value, 8080), "/*"),
+      IngressPath(ServiceMapping((application in kube).value, 8558), "/cluster")
+    ))
+  ),
+  ingressAnnotations in kube := Map(
+    Annotate.nginxIngress(),
+    Annotate.nginxRewriteTarget("/")
+  )
 )
-
