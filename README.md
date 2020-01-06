@@ -1,6 +1,6 @@
 # Flerken
 
-A sharded work scheduler
+![flerken-logo](https://user-images.githubusercontent.com/3875429/71815168-81317e00-3076-11ea-8dd0-2a04f48bded9.png) A sharded work scheduler
 
 ## Get started
 ```
