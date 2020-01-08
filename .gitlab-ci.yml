@@ -38,6 +38,7 @@ deploy-test:
   image: $CI_DEPLOYMENT_IMAGE
   script:
     - kubectl apply -f environments/test/deployment/roles.yml
+    - kubectl delete -f scheduler/target/kubeyml/deployment.yml
     - kubectl apply -f scheduler/target/kubeyml/deployment.yml
     - kubectl apply -f scheduler/target/kubeyml/service.yml
     - kubectl apply -f scheduler/target/kubeyml/ingress.yml
