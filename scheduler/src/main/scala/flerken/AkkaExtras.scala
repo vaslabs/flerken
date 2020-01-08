@@ -3,6 +3,8 @@ package flerken
 import akka.actor.typed.Behavior
 import akka.actor.typed.scaladsl.{ActorContext, Behaviors}
 
+import scala.annotation.tailrec
+
 object AkkaExtras {
 
   type PartialHandling[A] = PartialFunction[A, Behavior[A]]
@@ -12,10 +14,15 @@ object AkkaExtras {
   type BehaviorHandler[A] = List[PartialHandling[A]]
 
   implicit final class AkkaExtras[A](behaviorHandlers: BehaviorHandler[A]) {
-    private[this] def handle(msg: A, handlers: BehaviorHandler[A]): Behavior[A] = {
+    @tailrec private[this] def handle(msg: A, handlers: BehaviorHandler[A]): Behavior[A] = {
       handlers match {
-        case Nil          => Behaviors.unhandled
-        case head :: tail => head.applyOrElse[A, Behavior[A]](msg, _ => handle(msg, tail))
+        case Nil          => Behaviors.unhandled[A]
+        case head :: tail =>
+          val next = head.applyOrElse[A, Behavior[A]](msg, _ => Behaviors.unhandled[A])
+          if (Behavior.isUnhandled(next))
+            handle(msg, tail)
+          else
+            next
       }
     }
 
@@ -25,11 +32,16 @@ object AkkaExtras {
   }
 
   implicit final class AkkaExtrasCtx[A](behaviorHandlers: BehaviorWithContextHandler[A]) {
+    @tailrec
     private[this] def handle(ctx: ActorContext[A], msg: A, handlers: BehaviorWithContextHandler[A]): Behavior[A] = {
       handlers match {
         case Nil          => Behaviors.unhandled[A]
-        case head :: tail => head
-          .applyOrElse[(ActorContext[A], A), Behavior[A]]((ctx, msg), _ => handle(ctx, msg, tail))
+        case head :: tail =>
+          val next = head.applyOrElse[(ActorContext[A], A), Behavior[A]]((ctx, msg), _ => Behaviors.unhandled[A])
+          if (Behavior.isUnhandled(next))
+            handle(ctx, msg, tail)
+          else
+            next
       }
     }
     def toBehavior = Behaviors.receive[A] {
