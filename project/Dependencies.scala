@@ -20,6 +20,10 @@ object Dependencies {
 
     }
 
+    object AutoDowning {
+      val main = "0.0.13"
+    }
+
     val twitterChill = "0.9.4"
 
     object Circe {
@@ -76,12 +80,16 @@ object Dependencies {
         "com.typesafe.akka" %% "akka-cluster-sharding-typed"
       ).map(_ % Versions.Akka.main)
 
+      val autodowning = "com.github.TanUkkii007" %% "akka-cluster-custom-downing" % Versions.AutoDowning.main
+
       val clusterEssentials = Seq(
         "com.typesafe.akka" %% "akka-discovery" % Versions.Akka.main,
         "com.lightbend.akka.management" %% "akka-management" % Versions.Akka.management,
         "com.lightbend.akka.management" %% "akka-management-cluster-http" % Versions.Akka.management,
-        "com.lightbend.akka.management" %% "akka-management-cluster-bootstrap" % Versions.Akka.management
+        "com.lightbend.akka.management" %% "akka-management-cluster-bootstrap" % Versions.Akka.management,
+        autodowning
       )
+
       val logging = Seq(
         "com.typesafe.akka" %% "akka-slf4j" % Versions.Akka.main,
         "ch.qos.logback" % "logback-classic" % "1.2.3"

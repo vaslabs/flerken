@@ -2,7 +2,7 @@ version: '3'
 services:
   scheduler-node-a:
     container_name: scheduler-node-a
-    image: vaslabs/workscheduler:1.0-rc1-9-7e83156d-20191211-1435
+    image: vaslabs/workscheduler:1.0-rc1-23-c46f4b55-20200113-1535
     ports:
     - "8080:8080"
     - "8558:8558"
@@ -14,7 +14,7 @@ services:
       - FLERKEN_SERVICENAME=flerken-work-scheduler
       - FLERKEN_HOSTNAME=scheduler-node-a
   scheduler-node-b:
-    image: vaslabs/workscheduler:1.0-rc1-9-7e83156d-20191211-1435
+    image: vaslabs/workscheduler:1.0-rc1-23-c46f4b55-20200113-1535
     container_name: scheduler-node-b
     ports:
       - "8081:8080"

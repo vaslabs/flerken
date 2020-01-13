@@ -30,6 +30,7 @@ lazy val workScheduler = (project in file("scheduler")).settings(
   .settings(noPublishSettings).settings(dockerCommonSettings)
   .enablePlugins(KubeDeploymentPlugin, KubeServicePlugin, KubeIngressPlugin)
   .settings(deploymentSettings)
+  .settings(extraRepoSettings)
 
 lazy val schedulerIntegrationTests = (project in file("scheduler-integration-tests"))
   .settings(
@@ -121,3 +122,5 @@ lazy val deploymentSettings = Seq(
     Annotate.nginxRewriteTarget("/")
   )
 )
+
+lazy val extraRepoSettings = Seq(resolvers += Resolver.bintrayRepo("tanukkii007", "maven"))
