@@ -114,7 +114,7 @@ lazy val deploymentSettings = Seq(
   ingressRules in kube := List(
     HttpRule(Host(hostName), List(
       IngressPath(ServiceMapping((application in kube).value, 8080), "/*"),
-      IngressPath(ServiceMapping((application in kube).value, 8558), "/cluster")
+      IngressPath(ServiceMapping((application in kube).value, 8558), "/cluster/*")
     ))
   ),
   ingressAnnotations in kube := Map(
