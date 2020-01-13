@@ -30,6 +30,7 @@ lazy val workScheduler = (project in file("scheduler")).settings(
   .settings(noPublishSettings).settings(dockerCommonSettings)
   .enablePlugins(KubeDeploymentPlugin, KubeServicePlugin, KubeIngressPlugin)
   .settings(deploymentSettings)
+  .settings(extraRepoSettings)
 
 lazy val schedulerIntegrationTests = (project in file("scheduler-integration-tests"))
   .settings(
@@ -113,7 +114,7 @@ lazy val deploymentSettings = Seq(
   ingressRules in kube := List(
     HttpRule(Host(hostName), List(
       IngressPath(ServiceMapping((application in kube).value, 8080), "/*"),
-      IngressPath(ServiceMapping((application in kube).value, 8558), "/cluster")
+      IngressPath(ServiceMapping((application in kube).value, 8558), "/cluster/*")
     ))
   ),
   ingressAnnotations in kube := Map(
@@ -121,3 +122,5 @@ lazy val deploymentSettings = Seq(
     Annotate.nginxRewriteTarget("/")
   )
 )
+
+lazy val extraRepoSettings = Seq(resolvers += Resolver.bintrayRepo("tanukkii007", "maven"))
